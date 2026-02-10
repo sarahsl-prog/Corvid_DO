@@ -22,6 +22,20 @@ class Settings(BaseSettings):
 
     # Debug mode (enables SQL echo, verbose logging)
     debug: bool = True
+    log_level: str = "INFO"
+
+    # Gradient AI (for agent)
+    gradient_api_key: str = ""
+    gradient_kb_id: str = ""
+
+    # External API keys
+    abuseipdb_api_key: str = ""
+    nvd_api_key: str = ""
+
+    # Production tuning
+    max_concurrent_enrichments: int = 5
+    agent_timeout_seconds: int = 30
+    enrichment_cache_ttl_hours: int = 24
 
     model_config = {"env_prefix": "CORVID_"}
 
