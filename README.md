@@ -6,16 +6,41 @@ Corvid accepts Indicators of Compromise (IOCs), enriches them with data from mul
 
 ## Quick Start
 
+### Option A: Docker Compose (recommended)
+
 ```bash
-# Clone and configure
+# Configure environment
 cp .env.example .env
 
-# Option A: Docker Compose (recommended)
+# Start Postgres, Redis, and API
 docker compose up -d
 
-# Option B: Local development
+# Run database migrations (required on first start)
+docker compose exec api alembic revision --autogenerate -m "initial schema"
+docker compose exec api alembic upgrade head
+
+# Verify it's working
+curl http://localhost:8000/health
+```
+
+### Option B: Local Development
+
+```bash
+# Configure environment
+cp .env.example .env
+
+# Create virtualenv and install
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
+
+# Start Postgres and Redis (via Docker or local install)
+docker compose up -d postgres redis
+
+# Run database migrations (required on first start)
+alembic revision --autogenerate -m "initial schema"
+alembic upgrade head
+
+# Start the API server
 uvicorn corvid.api.main:app --reload
 ```
 
