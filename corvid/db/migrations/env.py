@@ -1,6 +1,12 @@
-"""Alembic migration environment configuration."""
+"""Alembic migration environment configuration.
+
+Reads the database URL from the CORVID_DATABASE_URL environment variable
+if set, otherwise falls back to the sqlalchemy.url in alembic.ini.
+This allows the same migration code to work both locally and inside Docker.
+"""
 
 import asyncio
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -12,6 +18,13 @@ from corvid.db.models import Base
 
 # Alembic Config object
 config = context.config
+
+# Override sqlalchemy.url with environment variable if present.
+# This is critical for Docker Compose where the DB host is "postgres"
+# rather than "localhost".
+database_url = os.getenv("CORVID_DATABASE_URL")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
 
 # Set up Python logging from alembic.ini
 if config.config_file_name is not None:
