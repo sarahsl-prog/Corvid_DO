@@ -88,3 +88,37 @@ async def delete_ioc(ioc_id: UUID, db: AsyncSession = Depends(get_db)) -> None:
     await db.delete(ioc)
     await db.commit()
     logger.info("IOC deleted: id={}", ioc_id)
+
+
+@router.post("/{ioc_id}/enrich", status_code=202)
+async def enrich_ioc(ioc_id: UUID, db: AsyncSession = Depends(get_db)) -> dict:
+    """Trigger enrichment for an IOC.
+
+    In production this enqueues a background task via Redis/arq.
+    For the MVP, it runs enrichment synchronously and returns results.
+    """
+    result = await db.execute(select(IOC).where(IOC.id == ioc_id))
+    ioc = result.scalar_one_or_none()
+    if not ioc:
+        raise HTTPException(status_code=404, detail="IOC not found")
+
+    logger.info("Enrichment requested for IOC: id={}, type={}, value={}", ioc.id, ioc.type, ioc.value)
+
+    # Import here to avoid circular imports at module level
+    from corvid.worker.tasks import _build_providers
+    from corvid.worker.orchestrator import EnrichmentOrchestrator
+
+    providers = _build_providers()
+    orchestrator = EnrichmentOrchestrator(providers)
+    results = await orchestrator.enrich_and_store(
+        db=db, ioc_id=ioc.id, ioc_type=ioc.type, ioc_value=ioc.value
+    )
+
+    return {
+        "status": "enrichment_complete",
+        "ioc_id": str(ioc.id),
+        "results": [
+            {"source": r.source, "success": r.success, "summary": r.summary}
+            for r in results
+        ],
+    }
