@@ -1,0 +1,89 @@
+# DigitalOcean App Platform Specification for Corvid
+# Deploy with: doctl apps create --spec deploy/do-app-spec.yaml
+#
+# Prerequisites:
+# 1. Create managed Postgres and Redis databases first
+# 2. Set up secrets in DO App Platform console or via doctl
+# 3. Update the github repo reference below
+
+name: corvid
+region: nyc
+
+services:
+  - name: api
+    # GitHub repository configuration
+    github:
+      repo: sarahsl-prog/Corvid_DO  # Update with your repo
+      branch: main
+      deploy_on_push: true
+
+    # Build configuration
+    dockerfile_path: Dockerfile
+
+    # Runtime configuration
+    http_port: 8000
+    instance_count: 1
+    instance_size_slug: basic-xxs  # $5/month, suitable for hackathon
+
+    # Health check
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 10
+      period_seconds: 30
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+    # Routes
+    routes:
+      - path: /
+
+    # Environment variables
+    envs:
+      # Database connection (set as secret in DO console)
+      - key: CORVID_DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+
+      # Redis connection (set as secret in DO console)
+      - key: CORVID_REDIS_URL
+        scope: RUN_TIME
+        type: SECRET
+
+      # Gradient AI API key (set as secret in DO console)
+      - key: CORVID_GRADIENT_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      # Gradient Knowledge Base ID
+      - key: CORVID_GRADIENT_KB_ID
+        scope: RUN_TIME
+        type: SECRET
+
+      # AbuseIPDB API key (set as secret in DO console)
+      - key: CORVID_ABUSEIPDB_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      # NVD API key (optional, for higher rate limits)
+      - key: CORVID_NVD_API_KEY
+        scope: RUN_TIME
+        type: SECRET
+
+      # Production settings
+      - key: CORVID_DEBUG
+        scope: RUN_TIME
+        value: "false"
+
+      - key: CORVID_LOG_LEVEL
+        scope: RUN_TIME
+        value: "INFO"
+
+# Database configuration (reference only - create separately)
+# databases:
+#   - name: corvid-db
+#     engine: PG
+#     production: false
+#     cluster_name: corvid-db
+#     db_name: corvid
+#     db_user: corvid

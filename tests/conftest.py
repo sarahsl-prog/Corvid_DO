@@ -18,6 +18,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "phase1: Phase 1 foundation tests")
     config.addinivalue_line("markers", "phase2: Phase 2 enrichment pipeline tests")
     config.addinivalue_line("markers", "phase3: Phase 3 agent and ingestion tests")
+    config.addinivalue_line("markers", "phase4: Phase 4 deployment and production tests")
 
 
 @pytest_asyncio.fixture

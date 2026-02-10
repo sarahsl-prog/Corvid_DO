@@ -44,6 +44,8 @@ testpaths = ["tests"]
 markers = [
     "phase1: Phase 1 foundation tests",
     "phase2: Phase 2 enrichment pipeline tests",
+    "phase3: Phase 3 agent and ingestion tests",
+    "phase4: Phase 4 deployment and production tests",
 ]
 
 [tool.ruff]
