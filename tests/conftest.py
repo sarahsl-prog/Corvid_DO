@@ -17,6 +17,7 @@ def pytest_configure(config: pytest.Config) -> None:
     """Register custom markers."""
     config.addinivalue_line("markers", "phase1: Phase 1 foundation tests")
     config.addinivalue_line("markers", "phase2: Phase 2 enrichment pipeline tests")
+    config.addinivalue_line("markers", "phase3: Phase 3 agent and ingestion tests")
 
 
 @pytest_asyncio.fixture
