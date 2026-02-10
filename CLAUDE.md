@@ -54,12 +54,17 @@ Configuration in `pyproject.toml` (100 char line length).
 1. Service Boundaries
 The system breaks into five logical services:
 
-Service	Responsibility																		Tech
-IOC Ingest API	Accept IOCs from clients, validate, enqueue			FastAPI (Python)
-Normalizer Worker	Dedup, classify IOC type, basic tagging			Python, consumes from queue
-Enrichment Worker	Call external TI APIs (VT, NVD, URLhaus, etc.)	Python, consumes from queue
-Gradient Agent	RAG + tool-calling reasoning layer						Python (Gradient ADK)
-Analysis API	Expose agent results to clients									FastAPI (Python) - can be same process as Ingest API
+Service	Responsibility										--								        Tech
+
+IOC Ingest API	Accept IOCs from clients, validate, enqueue	--		FastAPI (Python)
+
+Normalizer Worker	Dedup, classify IOC type, basic tagging	--		Python, consumes from queue
+
+Enrichment Worker	Call external TI APIs (VT, NVD, URLhaus, etc.)	-- Python, consumes from queue
+
+Gradient Agent	RAG + tool-calling reasoning layer		--				Python (Gradient ADK)
+
+Analysis API	Expose agent results to clients			--						FastAPI (Python) - can be same process as Ingest API
 
 ##Directory Structure
 ```bash
@@ -105,13 +110,6 @@ corvid/
 └── README.md
 ```
 
-## Key Patterns
-
-- **Circuit Breaker**: Ollama client handles failures gracefully (`assistant/integrations/ollama.py`)
-- **Async/Await**: All I/O operations are async with asyncpg and httpx
-- **Dependency Injection**: FastAPI `Depends(get_db)` for database sessions
-- **Alembic Migrations**: Schema changes in `alembic/` directory
-
 ## API Endpoints
 
 POST /api/v1/iocs/analyze
@@ -151,9 +149,8 @@ Return stored data + past analyses for an IOC.
 GET /api/v1/analyses/{analysis_id}
 Return a specific analysis by ID.
 
-## Database
 
-PostgreSQL 17 
+
 
 
 
