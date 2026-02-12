@@ -5,6 +5,7 @@
  */
 
 import { create } from "zustand";
+import type cytoscape from "cytoscape";
 import type { CyNode, CyEdge, LayoutName } from "../types/graph.ts";
 
 interface GraphState {
@@ -16,6 +17,8 @@ interface GraphState {
   selectedNodeId: string | null;
   /** Active layout algorithm name. */
   activeLayout: LayoutName;
+  /** Reference to the Cytoscape core instance for direct manipulation (animation). */
+  cyInstance: cytoscape.Core | null;
 
   /** Add nodes and edges to the graph, deduplicating by ID. */
   addElements: (newNodes: CyNode[], newEdges: CyEdge[]) => void;
@@ -27,6 +30,8 @@ interface GraphState {
   setLayout: (layout: LayoutName) => void;
   /** Clear the entire graph. */
   clearGraph: () => void;
+  /** Set the Cytoscape core instance reference. */
+  setCyInstance: (cy: cytoscape.Core | null) => void;
 }
 
 export const useGraphStore = create<GraphState>((set) => ({
@@ -34,6 +39,7 @@ export const useGraphStore = create<GraphState>((set) => ({
   edges: [],
   selectedNodeId: null,
   activeLayout: "dagre",
+  cyInstance: null,
 
   addElements: (newNodes, newEdges) =>
     set((state) => {
@@ -64,4 +70,6 @@ export const useGraphStore = create<GraphState>((set) => ({
       edges: [],
       selectedNodeId: null,
     }),
+
+  setCyInstance: (cy) => set({ cyInstance: cy }),
 }));

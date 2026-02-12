@@ -9,6 +9,7 @@ beforeEach(() => {
     edges: [],
     selectedNodeId: null,
     activeLayout: "dagre",
+    cyInstance: null,
   });
 });
 

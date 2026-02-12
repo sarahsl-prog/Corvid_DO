@@ -2,7 +2,7 @@
  * Cytoscape graph canvas — renders the investigation graph.
  *
  * Wraps react-cytoscapejs with layout management,
- * node selection events, and filter application.
+ * node selection events, and new-node animation.
  */
 
 import { useRef, useEffect, useCallback } from "react";
@@ -43,12 +43,14 @@ function getLayoutOptions(name: LayoutName): cytoscape.LayoutOptions {
 
 export function GraphCanvas() {
   const cyRef = useRef<cytoscape.Core | null>(null);
-  const { nodes, edges, activeLayout, selectNode } = useGraphStore();
+  const prevNodeCountRef = useRef(0);
+  const { nodes, edges, activeLayout, selectNode, setCyInstance } = useGraphStore();
 
   // Handle Cytoscape instance creation
   const handleCy = useCallback(
     (cy: cytoscape.Core) => {
       cyRef.current = cy;
+      setCyInstance(cy);
 
       // Node click → select
       cy.on("tap", "node", (evt) => {
@@ -63,14 +65,41 @@ export function GraphCanvas() {
         }
       });
     },
-    [selectNode],
+    [selectNode, setCyInstance],
   );
 
-  // Re-run layout when layout changes or elements change
+  // Re-run layout and animate new nodes when elements change
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy || cy.nodes().length === 0) return;
 
+    const currentNodeCount = nodes.length;
+    const prevNodeCount = prevNodeCountRef.current;
+    prevNodeCountRef.current = currentNodeCount;
+
+    // If new nodes were added, animate them in
+    if (currentNodeCount > prevNodeCount && prevNodeCount > 0) {
+      const allNodes = cy.nodes();
+      const newNodes = allNodes.slice(prevNodeCount);
+
+      if (newNodes.length > 0) {
+        // Start new nodes transparent
+        newNodes.style({ opacity: 0 });
+
+        // Run layout first, then fade in
+        const layout = cy.layout(getLayoutOptions(activeLayout));
+        layout.on("layoutstop", () => {
+          newNodes.animate(
+            { style: { opacity: 1 } },
+            { duration: 400, easing: "ease-in-out-cubic" },
+          );
+        });
+        layout.run();
+        return;
+      }
+    }
+
+    // Default: just run layout
     const layout = cy.layout(getLayoutOptions(activeLayout));
     layout.run();
   }, [activeLayout, nodes.length, edges.length]);

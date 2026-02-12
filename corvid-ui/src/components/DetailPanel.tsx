@@ -2,17 +2,27 @@
  * Detail panel — shows full data for the selected graph node.
  *
  * Slides in from the right when a node is selected.
+ * Uses dedicated card components for CVEs, MITRE techniques, and enrichments.
+ * Includes an "Expand" button that re-analyzes the IOC and adds new nodes.
  */
 
-import { X, ExternalLink, Shield, Crosshair, ShieldAlert } from "lucide-react";
+import { useState } from "react";
+import { X, Shield, Crosshair, ShieldAlert, RefreshCw, Loader2 } from "lucide-react";
 import { useGraphStore } from "../stores/graphStore.ts";
+import { useAnalysis } from "../hooks/useAnalysis.ts";
+import { analysisToElements } from "../lib/graphTransforms.ts";
 import { SeverityGauge } from "./SeverityGauge.tsx";
+import { CVECard } from "./CVECard.tsx";
+import { MitreOverlay } from "./MitreOverlay.tsx";
+import { EnrichmentCard } from "./EnrichmentCard.tsx";
 import { confidenceLabel } from "../lib/constants.ts";
 import type { CyNodeData } from "../types/graph.ts";
 import type { AnalysisResultItem } from "../types/api.ts";
 
 export function DetailPanel() {
-  const { selectedNodeId, nodes, selectNode } = useGraphStore();
+  const { selectedNodeId, nodes, selectNode, addElements } = useGraphStore();
+  const { analyze, loading: expandLoading } = useAnalysis();
+  const [expandError, setExpandError] = useState<string | null>(null);
 
   if (!selectedNodeId) return null;
 
@@ -21,6 +31,28 @@ export function DetailPanel() {
 
   const nodeData: CyNodeData = selectedNode.data;
   const resultData = nodeData.resultData as unknown as AnalysisResultItem | undefined;
+
+  /**
+   * Expand: re-submit this IOC for analysis to discover additional relationships.
+   * New nodes/edges are added to the existing graph (deduped by ID).
+   */
+  const handleExpand = async () => {
+    if (!resultData) return;
+    setExpandError(null);
+
+    const response = await analyze({
+      iocs: [resultData.ioc],
+      context: "Expansion of existing IOC — fetch additional relationships",
+      priority: "high",
+    });
+
+    if (response) {
+      const { nodes: newNodes, edges: newEdges } = analysisToElements(response);
+      addElements(newNodes, newEdges);
+    } else {
+      setExpandError("Expansion failed — check API connectivity");
+    }
+  };
 
   return (
     <div
@@ -57,6 +89,30 @@ export function DetailPanel() {
       {/* IOC-specific detail sections */}
       {nodeData.nodeType === "ioc" && resultData && (
         <div className="flex flex-col gap-4 p-4">
+          {/* Expand button */}
+          <button
+            onClick={handleExpand}
+            disabled={expandLoading}
+            className="flex items-center justify-center gap-2 rounded-md border border-accent bg-accent/10 px-3 py-2 text-sm font-medium text-accent hover:bg-accent/20 disabled:opacity-50"
+            data-testid="expand-button"
+          >
+            {expandLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Expanding...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4" />
+                Expand &amp; Enrich
+              </>
+            )}
+          </button>
+
+          {expandError && (
+            <p className="text-xs text-severity-9">{expandError}</p>
+          )}
+
           {/* Severity */}
           <Section title="Severity">
             <SeverityGauge severity={resultData.severity} />
@@ -64,10 +120,20 @@ export function DetailPanel() {
 
           {/* Confidence */}
           <Section title="Confidence">
-            <span className="text-sm text-text-secondary">
-              {(resultData.confidence * 100).toFixed(0)}% —{" "}
-              {confidenceLabel(resultData.confidence)}
-            </span>
+            <div className="flex items-center gap-2">
+              <div className="h-2 flex-1 rounded-full bg-bg-tertiary">
+                <div
+                  className="h-full rounded-full bg-accent transition-all"
+                  style={{ width: `${resultData.confidence * 100}%` }}
+                />
+              </div>
+              <span className="text-sm font-medium text-text-primary">
+                {(resultData.confidence * 100).toFixed(0)}%
+              </span>
+              <span className="text-xs text-text-muted">
+                {confidenceLabel(resultData.confidence)}
+              </span>
+            </div>
           </Section>
 
           {/* Summary */}
@@ -77,80 +143,54 @@ export function DetailPanel() {
             </p>
           </Section>
 
-          {/* Related CVEs */}
+          {/* Related CVEs — using CVECard */}
           {resultData.related_cves.length > 0 && (
-            <Section title="Related CVEs">
-              <ul className="flex flex-col gap-1">
+            <Section title={`Related CVEs (${resultData.related_cves.length})`}>
+              <div className="flex flex-col gap-2">
                 {resultData.related_cves.map((cve) => (
-                  <li key={cve} className="flex items-center gap-1 text-sm">
-                    <ShieldAlert className="h-3 w-3 text-node-cve" />
-                    <a
-                      href={`https://nvd.nist.gov/vuln/detail/${cve}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-accent hover:underline"
-                    >
-                      {cve}
-                    </a>
-                    <ExternalLink className="h-3 w-3 text-text-muted" />
-                  </li>
+                  <CVECard key={cve} cveId={cve} />
                 ))}
-              </ul>
+              </div>
             </Section>
           )}
 
-          {/* MITRE Techniques */}
+          {/* MITRE Techniques — using MitreOverlay */}
           {resultData.mitre_techniques.length > 0 && (
-            <Section title="MITRE ATT&CK">
-              <ul className="flex flex-col gap-1">
+            <Section title={`MITRE ATT&CK (${resultData.mitre_techniques.length})`}>
+              <div className="flex flex-col gap-2">
                 {resultData.mitre_techniques.map((tech) => (
-                  <li key={tech} className="flex items-center gap-1 text-sm">
-                    <Crosshair className="h-3 w-3 text-node-mitre" />
-                    <a
-                      href={`https://attack.mitre.org/techniques/${tech.replace(".", "/")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-accent hover:underline"
-                    >
-                      {tech}
-                    </a>
-                    <ExternalLink className="h-3 w-3 text-text-muted" />
-                  </li>
+                  <MitreOverlay key={tech} techniqueId={tech} />
                 ))}
-              </ul>
+              </div>
             </Section>
           )}
 
-          {/* Enrichments */}
+          {/* Enrichments — using EnrichmentCard */}
           {Object.keys(resultData.enrichments).length > 0 && (
-            <Section title="Enrichments">
-              {Object.entries(resultData.enrichments).map(([source, data]) => (
-                <div
-                  key={source}
-                  className="mb-2 rounded border border-bg-tertiary bg-bg-primary p-2"
-                >
-                  <h5 className="mb-1 text-xs font-medium uppercase text-text-muted">
-                    {source}
-                  </h5>
-                  <pre className="overflow-x-auto text-xs text-text-secondary">
-                    {JSON.stringify(data, null, 2)}
-                  </pre>
-                </div>
-              ))}
+            <Section title={`Enrichments (${Object.keys(resultData.enrichments).length})`}>
+              <div className="flex flex-col gap-2">
+                {Object.entries(resultData.enrichments).map(([source, data]) => (
+                  <EnrichmentCard key={source} source={source} data={data} />
+                ))}
+              </div>
             </Section>
           )}
 
           {/* Recommended Actions */}
           {resultData.recommended_actions.length > 0 && (
             <Section title="Recommended Actions">
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-2">
                 {resultData.recommended_actions.map((action, i) => (
                   <li
                     key={i}
-                    className="flex items-start gap-2 text-sm text-text-secondary"
+                    className="flex items-start gap-2 rounded border border-bg-tertiary bg-bg-primary p-2 text-sm text-text-secondary"
                   >
-                    <span className="mt-0.5 text-accent">&#x2022;</span>
-                    {action}
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 accent-accent"
+                      aria-label={`Mark action as done: ${action}`}
+                    />
+                    <span>{action}</span>
                   </li>
                 ))}
               </ul>
@@ -159,31 +199,17 @@ export function DetailPanel() {
         </div>
       )}
 
-      {/* CVE node detail */}
+      {/* CVE node detail — using CVECard */}
       {nodeData.nodeType === "cve" && (
         <div className="p-4">
-          <a
-            href={`https://nvd.nist.gov/vuln/detail/${nodeData.label}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-sm text-accent hover:underline"
-          >
-            View on NVD <ExternalLink className="h-3 w-3" />
-          </a>
+          <CVECard cveId={nodeData.label} />
         </div>
       )}
 
-      {/* MITRE node detail */}
+      {/* MITRE node detail — using MitreOverlay */}
       {nodeData.nodeType === "mitre" && (
         <div className="p-4">
-          <a
-            href={`https://attack.mitre.org/techniques/${nodeData.label.replace(".", "/")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-sm text-accent hover:underline"
-          >
-            View on MITRE ATT&CK <ExternalLink className="h-3 w-3" />
-          </a>
+          <MitreOverlay techniqueId={nodeData.label} />
         </div>
       )}
     </div>
@@ -200,7 +226,7 @@ function Section({
 }) {
   return (
     <div>
-      <h4 className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
+      <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">
         {title}
       </h4>
       {children}
