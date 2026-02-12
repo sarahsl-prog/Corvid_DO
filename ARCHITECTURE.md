@@ -255,6 +255,18 @@ corvid/
 ├── Dockerfile
 ├── pyproject.toml
 └── README.md
+
+corvid-ui/                  # Frontend — Investigation Board
+├── src/
+│   ├── components/         # React components (GraphCanvas, DetailPanel, etc.)
+│   ├── hooks/              # API hooks (useAnalysis, useIOC, useEnrichment)
+│   ├── stores/             # Zustand stores (graphStore, filterStore)
+│   ├── lib/                # Utilities (api client, graph transforms, styles)
+│   ├── types/              # TypeScript types mirroring Pydantic models
+│   └── __tests__/          # Unit and component tests (Vitest + RTL)
+├── package.json
+├── vite.config.ts
+└── tsconfig.json
 ```
 
 ---
@@ -284,9 +296,19 @@ corvid/
 - [ ] Build the /analyze endpoint that invokes the agent
 - [ ] Add guardrails (input validation, output schema enforcement)
 
+### Phase UI: Investigation Board Frontend (Implemented)
+- [x] Scaffold Vite + React 19 + TypeScript + Tailwind v4 project (`corvid-ui/`)
+- [x] Cytoscape.js graph engine with dagre/cose-bilkent layouts
+- [x] IOC submission form with auto-type detection (mirrors backend `_IOC_PATTERNS`)
+- [x] API integration hooks (`useAnalysis`, `useIOC`, `useEnrichment`)
+- [x] Graph transforms: `AnalyzeResponse` → Cytoscape nodes/edges
+- [x] Detail panel with CVECard, MitreOverlay, EnrichmentCard, SeverityGauge
+- [x] "Expand & Enrich" interactive graph exploration
+- [x] 91 unit/component tests (Vitest + RTL)
+
 ### Phase 4: Polish & Deploy (Day 4)
 - [ ] Deploy to DigitalOcean (App Platform or Droplets)
-- [ ] Add a minimal web UI or CLI demo
+- [x] Add a web UI (see Phase UI above)
 - [ ] Write up documentation
 - [ ] Load test and harden
 - [ ] Record demo

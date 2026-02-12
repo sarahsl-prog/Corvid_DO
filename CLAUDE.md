@@ -18,17 +18,26 @@ You are Corvid, a cybersecurity threat intelligence analyst. Given an IOC, use y
 
 ## Build and Run Commands
 
+### Backend
 ```bash
 # Setup
 cp .env.example .env          # Configure environment
 uv venv && source .venv/bin/activate
 uv pip install -r requirements-dev.txt
 pre-commit install
+```
 
+### Frontend (corvid-ui)
+```bash
+cd corvid-ui
+npm install                   # Install dependencies
+npm run dev                   # Dev server (proxies /api to localhost:8000)
+npm run build                 # Type-check + production build
 ```
 
 ## Testing
 
+### Backend
 ```bash
 pytest                                    # All tests
 pytest -m phase1                          # Phase 1 tests only
@@ -37,6 +46,16 @@ pytest --cov=assistant --cov-report=html  # With coverage
 ```
 
 Test structure: `tests/unit/`, `tests/integration/`, `tests/e2e/`, with shared fixtures in `tests/conftest.py`.
+
+### Frontend
+```bash
+cd corvid-ui
+npm test                                  # All tests (vitest)
+npx vitest --watch                        # Watch mode
+npx vitest run --coverage                 # With coverage
+```
+
+Test structure: `corvid-ui/src/__tests__/` with subdirectories `components/`, `stores/`, `lib/`.
 
 ## Code Quality
 
@@ -108,6 +127,18 @@ corvid/
 ├── Dockerfile
 ├── pyproject.toml
 └── README.md
+
+corvid-ui/                  # Frontend — Investigation Board (React 19 + Cytoscape.js)
+├── src/
+│   ├── components/         # React components (GraphCanvas, DetailPanel, IOCInputBar, etc.)
+│   ├── hooks/              # API hooks (useAnalysis, useIOC, useEnrichment)
+│   ├── stores/             # Zustand stores (graphStore, filterStore)
+│   ├── lib/                # Utilities (api client, graph transforms, Cytoscape styles)
+│   ├── types/              # TypeScript types mirroring Pydantic models
+│   └── __tests__/          # Unit and component tests (Vitest + RTL)
+├── package.json
+├── vite.config.ts
+└── tsconfig.json
 ```
 
 ## API Endpoints

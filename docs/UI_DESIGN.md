@@ -1,6 +1,6 @@
 # Corvid Investigation Board — UI Design & Implementation Plan
 
-> **Status**: Design Phase
+> **Status**: Phases UI-1 through UI-3 implemented; UI-4 and UI-5 pending
 > **Author**: Generated for DigitalOcean Hackathon
 > **Last Updated**: 2026-02-12
 > **Backend Dependency**: Corvid API v1 (FastAPI, Phases 1–4 complete)
@@ -49,15 +49,15 @@ The Corvid Investigation Board is a **graph-based threat intelligence workspace*
 
 | Layer | Technology | Version | Rationale |
 |-------|-----------|---------|-----------|
-| **Framework** | React | 18.x | Largest ecosystem, best Cytoscape bindings, team familiarity |
-| **Language** | TypeScript | 5.x | Type safety aligns with backend's strict Pydantic models; catches API contract drift at compile time |
-| **Build tool** | Vite | 5.x | Sub-second HMR, native ESM, minimal config vs. Webpack |
+| **Framework** | React | 19.x | Largest ecosystem, best Cytoscape bindings, team familiarity |
+| **Language** | TypeScript | 5.9 | Type safety aligns with backend's strict Pydantic models; catches API contract drift at compile time |
+| **Build tool** | Vite | 7.x | Sub-second HMR, native ESM, minimal config vs. Webpack |
 | **Graph engine** | Cytoscape.js | 3.x | Purpose-built for network graphs; layout algorithms, selectors, and event system designed for this exact use case |
 | **React bindings** | react-cytoscapejs | 2.x | Thin wrapper — renders Cytoscape in a React component with declarative element updates |
-| **Styling** | Tailwind CSS | 3.x | Utility-first, easy dark theme via `dark:` variants, fast iteration |
+| **Styling** | Tailwind CSS | 4.x | Utility-first, Vite plugin integration, easy dark theme, fast iteration |
 | **HTTP client** | Axios | 1.x | Interceptors for auth/request-ID propagation, cleaner error handling than fetch |
-| **State management** | Zustand | 4.x | Minimal boilerplate, works well for graph state (nodes/edges as a store); avoids Redux complexity |
-| **Routing** | React Router | 6.x | If multi-page (e.g., `/investigate`, `/history`); optional for SPA |
+| **State management** | Zustand | 5.x | Minimal boilerplate, works well for graph state (nodes/edges as a store); avoids Redux complexity |
+| **Routing** | React Router | 7.x | If multi-page (e.g., `/investigate`, `/history`); optional for SPA |
 | **Icons** | Lucide React | latest | Tree-shakeable SVG icons, consistent with security tooling aesthetics |
 
 ### 2.2 Why Cytoscape.js Over Alternatives
@@ -843,39 +843,38 @@ static_sites:
 
 ## Appendix C: Dependencies (package.json)
 
+See `corvid-ui/package.json` for the canonical dependency list. Key versions as of implementation:
+
 ```json
 {
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "cytoscape": "^3.28.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "cytoscape": "^3.33.1",
     "cytoscape-dagre": "^2.5.0",
     "cytoscape-cose-bilkent": "^4.1.0",
     "react-cytoscapejs": "^2.0.0",
-    "zustand": "^4.5.0",
-    "axios": "^1.6.0",
-    "lucide-react": "^0.300.0",
-    "react-router-dom": "^6.22.0"
+    "zustand": "^5.0.11",
+    "axios": "^1.13.5",
+    "lucide-react": "^0.563.0",
+    "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@vitejs/plugin-react": "^4.2.0",
-    "typescript": "^5.3.0",
-    "vite": "^5.1.0",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.0",
-    "autoprefixer": "^10.4.0",
-    "vitest": "^1.3.0",
-    "@testing-library/react": "^14.2.0",
-    "@testing-library/jest-dom": "^6.4.0",
-    "@testing-library/user-event": "^14.5.0",
-    "msw": "^2.2.0",
-    "@playwright/test": "^1.42.0",
-    "eslint": "^8.56.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "jsdom": "^24.0.0"
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1",
+    "tailwindcss": "^4.1.18",
+    "@tailwindcss/vite": "^4.1.18",
+    "vitest": "^4.0.18",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/user-event": "^14.6.1",
+    "msw": "^2.12.10",
+    "eslint": "^9.39.1",
+    "typescript-eslint": "^8.48.0",
+    "jsdom": "^28.0.0"
   }
 }
 ```

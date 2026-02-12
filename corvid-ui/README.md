@@ -1,73 +1,93 @@
-# React + TypeScript + Vite
+# Corvid Investigation Board
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Graph-based threat intelligence workspace for SOC analysts. Part of the [Corvid](../README.md) platform.
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev        # Dev server at http://localhost:5173 (proxies /api → localhost:8000)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Requires the Corvid API backend running on port 8000.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Scripts
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server with HMR |
+| `npm run build` | Type-check (`tsc -b`) + production build |
+| `npm run lint` | ESLint check |
+| `npm test` | Run all tests (Vitest, single run) |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run preview` | Preview production build |
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | React 19 + TypeScript 5.9 |
+| Build | Vite 7 |
+| Graph engine | Cytoscape.js + dagre/cose-bilkent layouts |
+| State | Zustand 5 |
+| Styling | Tailwind CSS v4 (dark theme) |
+| HTTP | Axios |
+| Testing | Vitest + React Testing Library |
+
+## Architecture
+
 ```
+IOCInputBar → useAnalysis hook → POST /api/v1/analyses/analyze
+                                        ↓
+                              graphTransforms.ts (API → Cytoscape elements)
+                                        ↓
+                              graphStore (Zustand) → GraphCanvas (Cytoscape.js)
+                                        ↓
+                              Click node → DetailPanel (CVECard, MitreOverlay, EnrichmentCard)
+                              Click "Expand" → useEnrichment → new nodes animated into graph
+```
+
+## Directory Layout
+
+```
+src/
+├── components/         # UI components
+│   ├── InvestigationBoard.tsx   # Main layout shell
+│   ├── GraphCanvas.tsx          # Cytoscape wrapper
+│   ├── IOCInputBar.tsx          # IOC submission form (auto-type detection)
+│   ├── DetailPanel.tsx          # Side panel for selected node
+│   ├── CVECard.tsx              # CVE detail card
+│   ├── MitreOverlay.tsx         # MITRE ATT&CK technique card
+│   ├── EnrichmentCard.tsx       # Per-source enrichment summary
+│   ├── SeverityGauge.tsx        # Color-coded 0-10 gauge
+│   ├── SeverityLegend.tsx       # Color scale reference
+│   └── LoadingOverlay.tsx       # Loading spinner
+├── hooks/              # API integration hooks
+├── stores/             # Zustand state management
+├── lib/                # Utilities (api client, graph transforms, styles, constants)
+├── types/              # TypeScript types mirroring backend Pydantic models
+└── __tests__/          # 91 unit/component tests
+```
+
+## Testing
+
+91 tests across 11 test files covering components, stores, and library utilities.
+
+```bash
+npm test                              # All tests
+npx vitest run src/__tests__/components/  # Component tests only
+npx vitest run src/__tests__/stores/      # Store tests only
+npx vitest run src/__tests__/lib/         # Library tests only
+npx vitest --watch                        # Watch mode
+npx vitest run --coverage                 # With coverage
+```
+
+## Implementation Status
+
+- [x] **Phase UI-1**: Project scaffold, Cytoscape graph rendering, dark theme
+- [x] **Phase UI-2**: API integration, IOC submission, graph transforms
+- [x] **Phase UI-3**: Detail panel, CVE/MITRE/enrichment cards, expand & enrich
+- [ ] **Phase UI-4**: Filters, layout switching, keyboard shortcuts, polish
+- [ ] **Phase UI-5**: Docker integration, nginx proxy, production deployment
+
+See [docs/UI_DESIGN.md](../docs/UI_DESIGN.md) for the full design specification.

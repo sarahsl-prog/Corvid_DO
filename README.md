@@ -70,20 +70,21 @@ Response includes severity score, confidence level, related CVEs, MITRE ATT&CK t
 ## Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────────┐
-│  FastAPI Gateway │────>│  Worker (Norm +   │────>│  Gradient Agent     │
-│  (ingest+query)  │     │  Enrichment)      │     │  (RAG + tools)      │
-└─────────────────┘     └──────────────────┘     └─────────────────────┘
-        │                        │                         │
-        └────────────────────────┴─────────────────────────┘
-                                 │
-                    ┌────────────┴────────────┐
-                    │  PostgreSQL + Vector DB  │
-                    └─────────────────────────┘
+┌─────────────┐     ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────────┐
+│  corvid-ui  │────>│  FastAPI Gateway │────>│  Worker (Norm +   │────>│  Gradient Agent     │
+│  (React SPA) │     │  (ingest+query)  │     │  Enrichment)      │     │  (RAG + tools)      │
+└─────────────┘     └─────────────────┘     └──────────────────┘     └─────────────────────┘
+                            │                        │                         │
+                            └────────────────────────┴─────────────────────────┘
+                                                     │
+                                        ┌────────────┴────────────┐
+                                        │  PostgreSQL + Vector DB  │
+                                        └─────────────────────────┘
 ```
 
 | Service | Role | Tech |
 |---------|------|------|
+| **corvid-ui** | Investigation Board — graph-based threat analysis workspace | React 19, TypeScript, Cytoscape.js, Zustand, Tailwind v4 |
 | **FastAPI Gateway** | REST API for IOC submission and retrieval | Python, FastAPI |
 | **Worker** | IOC normalization + external API enrichment | Python, Redis-backed queue |
 | **Gradient Agent** | AI reasoning with tool-calling and RAG | Python, Gradient ADK |
@@ -113,13 +114,48 @@ Response includes severity score, confidence level, related CVEs, MITRE ATT&CK t
 | `GET` | `/api/v1/analyses/{analysis_id}` | Get analysis results |
 | `GET` | `/health` | Health check |
 
+## Frontend (Investigation Board)
+
+The `corvid-ui/` directory contains a React-based graph investigation workspace that connects to the Corvid API. SOC analysts can submit IOCs, visualize relationships (IOC → CVE → MITRE technique), expand nodes interactively, and drill into detail panels.
+
+```bash
+cd corvid-ui
+
+# Install dependencies
+npm install
+
+# Start dev server (proxies /api to localhost:8000)
+npm run dev
+
+# Run tests (91 unit/component tests)
+npm test
+
+# Type-check and production build
+npm run build
+```
+
+Key technologies: React 19, TypeScript 5.9, Vite 7, Cytoscape.js (graph engine), Zustand (state), Tailwind CSS v4 (dark theme).
+
+See [docs/UI_DESIGN.md](docs/UI_DESIGN.md) for the full design specification and implementation plan.
+
 ## Testing
+
+### Backend
 
 ```bash
 pytest                                    # All tests
 pytest tests/api/ tests/db/ -v            # Phase 1 tests
 pytest tests/worker/ -v                   # Phase 2 tests
 pytest --cov=corvid --cov-report=term     # With coverage
+```
+
+### Frontend
+
+```bash
+cd corvid-ui
+npm test                                  # All tests (vitest)
+npx vitest --watch                        # Watch mode
+npx vitest run --coverage                 # With coverage
 ```
 
 ## Project Structure
@@ -154,6 +190,29 @@ corvid/
 ├── docker-compose.yml
 ├── Dockerfile
 └── pyproject.toml
+
+corvid-ui/                  # Frontend — Investigation Board
+├── src/
+│   ├── components/         # React components
+│   │   ├── InvestigationBoard.tsx   # Main layout (canvas + panels)
+│   │   ├── GraphCanvas.tsx          # Cytoscape wrapper
+│   │   ├── IOCInputBar.tsx          # IOC submission form
+│   │   ├── DetailPanel.tsx          # Node detail side panel
+│   │   ├── CVECard.tsx              # CVE detail card
+│   │   ├── MitreOverlay.tsx         # MITRE technique card
+│   │   ├── EnrichmentCard.tsx       # Per-source enrichment card
+│   │   ├── SeverityGauge.tsx        # Color-coded 0-10 gauge
+│   │   ├── SeverityLegend.tsx       # Color scale reference
+│   │   └── LoadingOverlay.tsx       # Loading spinner
+│   ├── hooks/              # API hooks (useAnalysis, useIOC, useEnrichment)
+│   ├── stores/             # Zustand stores (graphStore, filterStore)
+│   ├── lib/                # Utilities (api client, graph transforms, styles)
+│   ├── types/              # TypeScript types (API, graph, filters)
+│   └── __tests__/          # Unit and component tests
+├── package.json
+├── vite.config.ts
+├── vitest.config.ts
+└── tsconfig.json
 ```
 
 ## External Integrations
