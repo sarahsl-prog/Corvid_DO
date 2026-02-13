@@ -151,23 +151,32 @@ if [ "$SKIP_REDIS" = false ]; then
         if doctl databases list --format Name --no-header | grep -q "^${REDIS_NAME}$"; then
             log_warn "Redis $REDIS_NAME already exists, skipping creation"
         else
-            doctl databases create "$REDIS_NAME" \
+            if doctl databases create "$REDIS_NAME" \
                 --engine redis \
                 --version 7 \
                 --size "$DB_SIZE" \
                 --region "$REGION" \
                 --num-nodes 1 \
-                --wait
-            log_info "Redis instance created successfully"
+                --wait 2>&1; then
+                log_info "Redis instance created successfully"
+            else
+                log_error "Redis creation failed. Options:"
+                echo "  1. Use Upstash (free): https://upstash.com"
+                echo "  2. Create a droplet and run Redis in Docker"
+                echo "  3. Try a different region: ./deploy/provision.sh --region sfo3 --skip-db"
+                SKIP_REDIS=true
+            fi
         fi
 
-        # Get connection string
-        REDIS_ID=$(doctl databases list --format ID,Name --no-header | grep "$REDIS_NAME" | awk '{print $1}')
-        if [ -n "$REDIS_ID" ]; then
-            REDIS_URI=$(doctl databases connection "$REDIS_ID" --format URI --no-header)
-            echo ""
-            log_info "Redis connection string (add to App Platform secrets):"
-            echo "  CORVID_REDIS_URL=$REDIS_URI"
+        # Get connection string (if Redis was created)
+        if [ "$SKIP_REDIS" = false ]; then
+            REDIS_ID=$(doctl databases list --format ID,Name --no-header | grep "$REDIS_NAME" | awk '{print $1}')
+            if [ -n "$REDIS_ID" ]; then
+                REDIS_URI=$(doctl databases connection "$REDIS_ID" --format URI --no-header)
+                echo ""
+                log_info "Redis connection string (add to App Platform secrets):"
+                echo "  CORVID_REDIS_URL=$REDIS_URI"
+            fi
         fi
     fi
 else

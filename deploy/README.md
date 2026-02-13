@@ -60,7 +60,7 @@ chmod +x deploy/provision.sh
 
 This creates:
 - Managed PostgreSQL database (`db-s-1vcpu-1gb`, ~$15/month)
-- Managed Redis instance (`db-s-1vcpu-1gb`, ~$15/month)
+- Managed Redis OR use Upstash/free Redis service
 
 ### 2. Configure App Platform Secrets
 
@@ -90,7 +90,34 @@ Optional:
 |----------|-------------|
 | `CORVID_GRADIENT_KB_ID` | Gradient Knowledge Base ID (for CVE context in analysis) |
 
-### 3. Update App Spec
+### 3. Create a Redis Droplet (if not using managed Redis)
+
+If managed Redis is not available in your region, you can run Redis in a Docker container on a Droplet:
+
+```bash
+# Create a droplet (minimum $4/mo)
+doctl compute droplet create corvid-redis \
+  --image docker-20-04 \
+  --region sfo3 \
+  --size s-1vcpu-1gb \
+  --ssh-keys <your-ssh-key-id>
+
+# After creation, SSH in and run Redis:
+# 1. Create droplet with Docker app
+# 2. SSH in and run:
+docker run -d --name corvid-redis \
+  -p 6379:6379 \
+  redis:latest
+
+# Get the droplet IP and use as: redis://:@<droplet-ip>:6379
+```
+
+Or use **Upstash** (recommended - free serverless Redis):
+1. Sign up at https://upstash.com
+2. Create a free Redis database
+3. Copy the connection URL (format: `redis://default:pass@host:port`)
+
+### 4. Update App Spec
 
 Edit `deploy/do-app-spec.yaml`:
 ```yaml
@@ -99,7 +126,7 @@ github:
   branch: main
 ```
 
-### 4. Deploy the App
+### 5. Deploy the App
 
 ```bash
 # Create the app
@@ -109,7 +136,7 @@ doctl apps create --spec deploy/do-app-spec.yaml
 doctl apps update <app-id> --spec deploy/do-app-spec.yaml
 ```
 
-### 5. Run Database Migrations
+### 6. Run Database Migrations
 
 After deployment, run migrations against the production database:
 
@@ -121,7 +148,7 @@ export CORVID_DATABASE_URL="postgresql+asyncpg://user:pass@host:port/dbname?sslm
 alembic upgrade head
 ```
 
-### 6. (Optional) Populate Knowledge Base
+### 7. (Optional) Populate Knowledge Base
 
 If using Gradient AI for full analysis with CVE context:
 
