@@ -85,6 +85,11 @@ Required secrets:
 | `CORVID_ABUSEIPDB_API_KEY` | AbuseIPDB API key |
 | `CORVID_NVD_API_KEY` | NVD API key (optional) |
 
+Optional:
+| Variable | Description |
+|----------|-------------|
+| `CORVID_GRADIENT_KB_ID` | Gradient Knowledge Base ID (for CVE context in analysis) |
+
 ### 3. Update App Spec
 
 Edit `deploy/do-app-spec.yaml`:
@@ -118,12 +123,18 @@ alembic upgrade head
 
 ### 6. (Optional) Populate Knowledge Base
 
-If using Gradient AI for full analysis:
+If using Gradient AI for full analysis with CVE context:
 
+1. First, create a Knowledge Base in the [Gradient AI Console](https://cloud.digitalocean.com/gradient-ai-platform/knowledge-bases)
+2. Get the Knowledge Base ID
+3. Uncomment the `CORVID_GRADIENT_KB_ID` secret in `do-app-spec.yaml`
+4. Redeploy: `doctl apps update <app-id> --spec deploy/do-app-spec.yaml`
+5. Load CVEs:
 ```bash
-# Ingest CVEs, MITRE ATT&CK, and CISA KEV
-python -m corvid.ingestion.loader --years=2
+python -m corvid.ingestion.loader --cve-file=path/to/cvelistV5/cves --years=2
 ```
+
+Or use the API to populate the KB after deployment.
 
 ### 7. Verify Deployment
 

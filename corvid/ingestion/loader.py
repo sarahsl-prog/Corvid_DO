@@ -264,8 +264,14 @@ async def upload_to_gradient_kb(
     api_key = api_key or settings.gradient_api_key
     kb_id = kb_id or settings.gradient_kb_id
 
-    if not api_key or not kb_id:
-        logger.warning("Gradient API key or KB ID not configured, skipping upload")
+    if not api_key:
+        logger.warning("Gradient API key not configured, skipping KB upload")
+        return False
+
+    if not kb_id:
+        logger.warning(
+            "Gradient KB ID not configured, skipping KB upload. Set CORVID_GRADIENT_KB_ID to enable KB."
+        )
         return False
 
     logger.info(

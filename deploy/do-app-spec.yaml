@@ -55,10 +55,10 @@ services:
         scope: RUN_TIME
         type: SECRET
 
-      # Gradient Knowledge Base ID
-      - key: CORVID_GRADIENT_KB_ID
-        scope: RUN_TIME
-        type: SECRET
+      # Gradient Knowledge Base ID (optional - app works without it, just no CVE KB)
+      # - key: CORVID_GRADIENT_KB_ID
+      #   scope: RUN_TIME
+      #   type: SECRET
 
       # Gradient Model (optional, defaults to gradient-large)
       - key: CORVID_GRADIENT_MODEL
