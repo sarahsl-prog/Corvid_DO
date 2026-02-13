@@ -60,6 +60,11 @@ services:
         scope: RUN_TIME
         type: SECRET
 
+      # Gradient Model (optional, defaults to gradient-large)
+      - key: CORVID_GRADIENT_MODEL
+        scope: RUN_TIME
+        value: "gradient-large"
+
       # AbuseIPDB API key (set as secret in DO console)
       - key: CORVID_ABUSEIPDB_API_KEY
         scope: RUN_TIME
