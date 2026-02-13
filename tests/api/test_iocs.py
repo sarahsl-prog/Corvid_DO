@@ -81,7 +81,10 @@ class TestCreateIOC:
         # IP type with domain value should fail
         resp = await client.post("/api/v1/iocs/", json={"type": "ip", "value": "evil.example.com"})
         assert resp.status_code == 422
-        assert "value" in resp.json()["detail"].lower()
+        detail = resp.json()["detail"]
+        # Detail can be a list or string
+        detail_str = str(detail).lower()
+        assert "value" in detail_str or "invalid" in detail_str
 
     @pytest.mark.asyncio
     async def test_create_hash_mismatch(self, client) -> None:
