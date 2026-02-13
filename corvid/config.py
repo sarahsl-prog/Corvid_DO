@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     # Gradient AI (for agent)
     gradient_api_key: str = ""
     gradient_kb_id: str = ""
+    gradient_model: str = "gradient-large"
 
     # External API keys
     abuseipdb_api_key: str = ""

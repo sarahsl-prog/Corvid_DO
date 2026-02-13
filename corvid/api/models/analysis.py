@@ -13,7 +13,7 @@ class AnalysisResponse(BaseModel):
     """Response model for a threat analysis result (from database)."""
 
     id: UUID
-    ioc_ids: list[UUID]
+    ioc_ids: list[str]
     analysis_text: str
     confidence: float
     mitre_techniques: list[str]
@@ -44,13 +44,9 @@ class AnalysisResultItem(BaseModel):
 
     ioc: IOCCreate
     severity: float = Field(..., ge=0.0, le=10.0, description="Severity score 0-10")
-    confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Confidence in the assessment 0-1"
-    )
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in the assessment 0-1")
     summary: str = Field(..., description="Brief summary of findings")
-    related_cves: list[str] = Field(
-        default_factory=list, description="Related CVE IDs"
-    )
+    related_cves: list[str] = Field(default_factory=list, description="Related CVE IDs")
     mitre_techniques: list[str] = Field(
         default_factory=list, description="MITRE ATT&CK technique IDs"
     )

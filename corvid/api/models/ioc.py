@@ -1,24 +1,13 @@
 """Pydantic models for IOC API request/response validation."""
 
-import enum
 import ipaddress
 import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-
-class IOCType(str, enum.Enum):
-    """Supported IOC (Indicator of Compromise) types."""
-
-    IP = "ip"
-    DOMAIN = "domain"
-    URL = "url"
-    HASH_MD5 = "hash_md5"
-    HASH_SHA1 = "hash_sha1"
-    HASH_SHA256 = "hash_sha256"
-    EMAIL = "email"
+from corvid.types import IOCType
 
 
 # Compiled regex patterns for IOC format validation
@@ -32,6 +21,22 @@ _IOC_PATTERNS: dict[IOCType, re.Pattern[str]] = {
     IOCType.EMAIL: re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"),
     IOCType.URL: re.compile(r"^https?://\S+$"),
 }
+
+
+def _validate_ioc_value_by_type(ioc_type: IOCType, value: str) -> bool:
+    """Validate that a value matches the expected format for its IOC type."""
+    if ioc_type == IOCType.IP:
+        try:
+            ipaddress.ip_address(value)
+            return True
+        except ValueError:
+            return False
+
+    pattern = _IOC_PATTERNS.get(ioc_type)
+    if pattern:
+        return bool(pattern.match(value))
+
+    return False
 
 
 class IOCCreate(BaseModel):
@@ -49,6 +54,16 @@ class IOCCreate(BaseModel):
         if not v:
             raise ValueError("IOC value cannot be empty or whitespace-only")
         return v
+
+    @model_validator(mode="after")
+    def validate_value_matches_type(self) -> "IOCCreate":
+        """Validate that the value matches the declared IOC type."""
+        if not _validate_ioc_value_by_type(self.type, self.value):
+            raise ValueError(
+                f"Invalid value '{self.value}' for IOC type '{self.type.value}'. "
+                f"Value does not match expected format."
+            )
+        return self
 
 
 class IOCResponse(BaseModel):

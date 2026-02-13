@@ -23,9 +23,7 @@ class TestCreateIOC:
 
     @pytest.mark.asyncio
     async def test_create_ip_ioc(self, client) -> None:
-        resp = await client.post(
-            "/api/v1/iocs/", json={"type": "ip", "value": "192.168.1.1"}
-        )
+        resp = await client.post("/api/v1/iocs/", json={"type": "ip", "value": "192.168.1.1"})
         assert resp.status_code == 201
         data = resp.json()
         assert data["type"] == "ip"
@@ -58,9 +56,7 @@ class TestCreateIOC:
 
     @pytest.mark.asyncio
     async def test_create_duplicate_merges_tags(self, client) -> None:
-        await client.post(
-            "/api/v1/iocs/", json={"type": "ip", "value": "10.0.0.2", "tags": ["c2"]}
-        )
+        await client.post("/api/v1/iocs/", json={"type": "ip", "value": "10.0.0.2", "tags": ["c2"]})
         resp = await client.post(
             "/api/v1/iocs/",
             json={"type": "ip", "value": "10.0.0.2", "tags": ["botnet"]},
@@ -71,14 +67,44 @@ class TestCreateIOC:
 
     @pytest.mark.asyncio
     async def test_create_invalid_type(self, client) -> None:
-        resp = await client.post(
-            "/api/v1/iocs/", json={"type": "invalid", "value": "test"}
-        )
+        resp = await client.post("/api/v1/iocs/", json={"type": "invalid", "value": "test"})
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
     async def test_create_empty_value(self, client) -> None:
         resp = await client.post("/api/v1/iocs/", json={"type": "ip", "value": ""})
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_create_mismatched_type_and_value(self, client) -> None:
+        """Test that type must match the value format."""
+        # IP type with domain value should fail
+        resp = await client.post("/api/v1/iocs/", json={"type": "ip", "value": "evil.example.com"})
+        assert resp.status_code == 422
+        assert "value" in resp.json()["detail"].lower()
+
+    @pytest.mark.asyncio
+    async def test_create_hash_mismatch(self, client) -> None:
+        """Test that hash type requires correct hash format."""
+        # SHA256 type with MD5-length value should fail
+        resp = await client.post(
+            "/api/v1/iocs/",
+            json={"type": "hash_sha256", "value": "d41d8cd98f00b204e9800998ecf8427e"},
+        )
+        assert resp.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_create_valid_email(self, client) -> None:
+        """Test that valid email passes validation."""
+        resp = await client.post(
+            "/api/v1/iocs/", json={"type": "email", "value": "attacker@evil.com"}
+        )
+        assert resp.status_code == 201
+
+    @pytest.mark.asyncio
+    async def test_create_invalid_email(self, client) -> None:
+        """Test that invalid email format is rejected."""
+        resp = await client.post("/api/v1/iocs/", json={"type": "email", "value": "not-an-email"})
         assert resp.status_code == 422
 
 
@@ -96,9 +122,7 @@ class TestListIOCs:
     @pytest.mark.asyncio
     async def test_list_after_create(self, client) -> None:
         await client.post("/api/v1/iocs/", json={"type": "ip", "value": "1.2.3.4"})
-        await client.post(
-            "/api/v1/iocs/", json={"type": "domain", "value": "evil.com"}
-        )
+        await client.post("/api/v1/iocs/", json={"type": "domain", "value": "evil.com"})
         resp = await client.get("/api/v1/iocs/")
         data = resp.json()
         assert data["total"] == 2
@@ -107,9 +131,7 @@ class TestListIOCs:
     @pytest.mark.asyncio
     async def test_list_filter_by_type(self, client) -> None:
         await client.post("/api/v1/iocs/", json={"type": "ip", "value": "1.2.3.4"})
-        await client.post(
-            "/api/v1/iocs/", json={"type": "domain", "value": "evil.com"}
-        )
+        await client.post("/api/v1/iocs/", json={"type": "domain", "value": "evil.com"})
         resp = await client.get("/api/v1/iocs/?type=ip")
         data = resp.json()
         assert data["total"] == 1
@@ -118,9 +140,7 @@ class TestListIOCs:
     @pytest.mark.asyncio
     async def test_list_pagination(self, client) -> None:
         for i in range(5):
-            await client.post(
-                "/api/v1/iocs/", json={"type": "ip", "value": f"10.0.0.{i}"}
-            )
+            await client.post("/api/v1/iocs/", json={"type": "ip", "value": f"10.0.0.{i}"})
         resp = await client.get("/api/v1/iocs/?limit=2&offset=0")
         assert len(resp.json()["items"]) == 2
         assert resp.json()["total"] == 5
@@ -131,9 +151,7 @@ class TestGetIOC:
 
     @pytest.mark.asyncio
     async def test_get_existing(self, client) -> None:
-        create_resp = await client.post(
-            "/api/v1/iocs/", json={"type": "ip", "value": "1.2.3.4"}
-        )
+        create_resp = await client.post("/api/v1/iocs/", json={"type": "ip", "value": "1.2.3.4"})
         ioc_id = create_resp.json()["id"]
         resp = await client.get(f"/api/v1/iocs/{ioc_id}")
         assert resp.status_code == 200
@@ -141,9 +159,7 @@ class TestGetIOC:
 
     @pytest.mark.asyncio
     async def test_get_nonexistent(self, client) -> None:
-        resp = await client.get(
-            "/api/v1/iocs/00000000-0000-0000-0000-000000000000"
-        )
+        resp = await client.get("/api/v1/iocs/00000000-0000-0000-0000-000000000000")
         assert resp.status_code == 404
 
 
@@ -152,9 +168,7 @@ class TestDeleteIOC:
 
     @pytest.mark.asyncio
     async def test_delete_existing(self, client) -> None:
-        create_resp = await client.post(
-            "/api/v1/iocs/", json={"type": "ip", "value": "1.2.3.4"}
-        )
+        create_resp = await client.post("/api/v1/iocs/", json={"type": "ip", "value": "1.2.3.4"})
         ioc_id = create_resp.json()["id"]
         del_resp = await client.delete(f"/api/v1/iocs/{ioc_id}")
         assert del_resp.status_code == 204
@@ -163,7 +177,5 @@ class TestDeleteIOC:
 
     @pytest.mark.asyncio
     async def test_delete_nonexistent(self, client) -> None:
-        resp = await client.delete(
-            "/api/v1/iocs/00000000-0000-0000-0000-000000000000"
-        )
+        resp = await client.delete("/api/v1/iocs/00000000-0000-0000-0000-000000000000")
         assert resp.status_code == 404

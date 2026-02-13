@@ -12,7 +12,7 @@ from loguru import logger
 from pydantic import ValidationError
 
 from corvid.api.models.analysis import AgentAnalysisOutput
-from corvid.api.models.ioc import IOCType
+from corvid.types import IOCType
 
 # Patterns for validating identifiers
 CVE_PATTERN = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
@@ -163,15 +163,11 @@ def validate_agent_output(output_text: str) -> AgentAnalysisOutput:
         )
 
     # Validate CVE ID formats
-    invalid_cves = [
-        cve for cve in result.related_cves if not CVE_PATTERN.match(cve)
-    ]
+    invalid_cves = [cve for cve in result.related_cves if not CVE_PATTERN.match(cve)]
     if invalid_cves:
         logger.warning("Agent returned invalid CVE IDs: {}", invalid_cves)
         # Filter out invalid CVEs rather than failing
-        result.related_cves = [
-            cve for cve in result.related_cves if CVE_PATTERN.match(cve)
-        ]
+        result.related_cves = [cve for cve in result.related_cves if CVE_PATTERN.match(cve)]
 
     # Validate MITRE technique ID formats
     invalid_techniques = [
