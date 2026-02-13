@@ -45,10 +45,10 @@ services:
         scope: RUN_TIME
         type: SECRET
 
-      # Redis connection (set as secret in DO console)
+      # Redis connection (Droplet IP - update after deployment)
       - key: CORVID_REDIS_URL
         scope: RUN_TIME
-        type: SECRET
+        value: "redis://:@165.227.66.57:6379"
 
       # Gradient AI API key (set as secret in DO console)
       - key: CORVID_GRADIENT_API_KEY
