@@ -9,16 +9,22 @@
 # Usage:
 #   ./deploy/provision.sh [--region REGION] [--skip-db] [--skip-redis] [--dry-run]
 #
+# Default region: sfo3 (San Francisco 3)
+# Run with --region=nyc1 if you want New York
+#
 # This script will:
 #   1. Create a managed PostgreSQL database
 #   2. Create a managed Redis instance
 #   3. Display connection strings for App Platform secrets
 #   4. Optionally deploy the app (requires secrets to be set first)
+#
+# Note: If Redis is not available in your region, sign up for free at
+#       https://upstash.com and use Upstash Redis instead (drop-in replacement)
 
 set -euo pipefail
 
 # Configuration
-REGION="${REGION:-nyc1}"
+REGION="${REGION:-sfo3}"
 DB_NAME="corvid-db"
 DB_SIZE="db-s-1vcpu-1gb"
 REDIS_NAME="corvid-redis"
