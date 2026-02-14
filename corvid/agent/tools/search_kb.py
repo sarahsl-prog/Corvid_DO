@@ -44,10 +44,12 @@ async def search_knowledge_base(
         }
 
     # Build request to Gradient KB search API
-    # Note: This is a placeholder for the actual Gradient API format
-    gradient_search_url = (
-        f"https://api.gradient.ai/v1/knowledge-bases/{settings.gradient_kb_id}/search"
-    )
+    if settings.gradient_kb_url:
+        gradient_search_url = f"{settings.gradient_kb_url}/search"
+    else:
+        gradient_search_url = (
+            f"https://api.gradient.ai/v1/knowledge-bases/{settings.gradient_kb_id}/search"
+        )
 
     headers = {
         "Authorization": f"Bearer {settings.gradient_api_key}",
@@ -94,9 +96,7 @@ async def search_knowledge_base(
                     dt = doc["doc_type"]
                     type_counts[dt] = type_counts.get(dt, 0) + 1
 
-                type_summary = ", ".join(
-                    f"{count} {dtype}" for dtype, count in type_counts.items()
-                )
+                type_summary = ", ".join(f"{count} {dtype}" for dtype, count in type_counts.items())
                 message = f"Found {total_found} relevant document(s): {type_summary}."
             else:
                 message = f"No documents found matching '{query}'."

@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     # Gradient AI (for agent)
     gradient_api_key: str = ""
     gradient_kb_id: str = ""
+    gradient_kb_url: str = ""  # Full KB URL (e.g., https://kbaas.do-ai.run/v1/{kb_id})
     gradient_model: str = "gradient-large"
 
     # External API keys

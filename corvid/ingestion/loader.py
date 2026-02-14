@@ -301,9 +301,12 @@ async def upload_to_gradient_kb(
         "Content-Type": "application/json",
     }
 
-    # Note: This is a placeholder for the actual Gradient KB API
-    # The actual endpoint and payload format may differ
-    gradient_kb_url = f"https://api.gradient.ai/v1/knowledge-bases/{kb_id}/documents"
+    # Upload to Gradient KB
+    # Use the full KB URL if provided, otherwise construct from KB ID
+    if settings.gradient_kb_url:
+        gradient_kb_url = f"{settings.gradient_kb_url}/documents"
+    else:
+        gradient_kb_url = f"https://api.gradient.ai/v1/knowledge-bases/{kb_id}/documents"
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         for i in range(0, len(gradient_docs), batch_size):
