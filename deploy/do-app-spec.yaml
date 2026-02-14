@@ -40,40 +40,35 @@ services:
 
     # Environment variables
     envs:
-      # Database connection (set as secret in DO console)
+      # Database connection 
       - key: CORVID_DATABASE_URL
         scope: RUN_TIME
-        type: SECRET
+        value: "postgresql+asyncpg://REPLACEME_WITH_DB_URL"
 
       # Redis connection (Droplet IP - update after deployment)
       - key: CORVID_REDIS_URL
         scope: RUN_TIME
         value: "redis://:@165.227.66.57:6379"
 
-      # Gradient AI API key (set as secret in DO console)
+      # Gradient AI API key
       - key: CORVID_GRADIENT_API_KEY
         scope: RUN_TIME
-        type: SECRET
-
-      # Gradient Knowledge Base ID (optional - app works without it, just no CVE KB)
-      # - key: CORVID_GRADIENT_KB_ID
-      #   scope: RUN_TIME
-      #   type: SECRET
+        value: "REPLACEME_WITH_GRADIENT_KEY"
 
       # Gradient Model (optional, defaults to gradient-large)
       - key: CORVID_GRADIENT_MODEL
         scope: RUN_TIME
         value: "gradient-large"
 
-      # AbuseIPDB API key (set as secret in DO console)
+      # AbuseIPDB API key
       - key: CORVID_ABUSEIPDB_API_KEY
         scope: RUN_TIME
-        type: SECRET
+        value: "REPLACEME_WITH_ABUSEIPDB_KEY"
 
       # NVD API key (optional, for higher rate limits)
       - key: CORVID_NVD_API_KEY
         scope: RUN_TIME
-        type: SECRET
+        value: ""
 
       # Production settings
       - key: CORVID_DEBUG

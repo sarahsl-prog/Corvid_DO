@@ -301,9 +301,12 @@ async def upload_to_gradient_kb(
         "Content-Type": "application/json",
     }
 
-    # Note: This is a placeholder for the actual Gradient KB API
-    # The actual endpoint and payload format may differ
-    gradient_kb_url = f"https://api.gradient.ai/v1/knowledge-bases/{kb_id}/documents"
+    # Upload to Gradient KB
+    # Use the full KB URL if provided, otherwise construct from KB ID
+    if settings.gradient_kb_url:
+        gradient_kb_url = f"{settings.gradient_kb_url}/documents"
+    else:
+        gradient_kb_url = f"https://api.gradient.ai/v1/knowledge-bases/{kb_id}/documents"
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         for i in range(0, len(gradient_docs), batch_size):
@@ -377,26 +380,69 @@ if __name__ == "__main__":
         dry_run = "--dry-run" in sys.argv
         years = 2
         cve_file = None
+        export_file = None
 
         for arg in sys.argv:
             if arg.startswith("--years="):
                 years = int(arg.split("=")[1])
             elif arg.startswith("--cve-file="):
                 cve_file = arg.split("=", 1)[1]
+            elif arg.startswith("--export="):
+                export_file = arg.split("=", 1)[1]
 
         if cve_file:
             # Load from local file
             logger.info("Loading CVEs from local file: {}", cve_file)
             cve_docs = await fetch_from_local_file(cve_file)
 
-            # Convert to KB documents
+            # Also fetch MITRE ATT&CK and CISA KEV for complete KB
+            logger.info("Fetching MITRE ATT&CK techniques...")
+            mitre_docs = await fetch_mitre_attack()
+            logger.info("Fetching CISA KEV...")
+            kev_docs = await fetch_cisa_kev()
+
+            # Convert all to KB documents
             kb_docs = []
             for cve in cve_docs:
                 kb_docs.append(_cve_to_kb_doc(cve))
+            for mitre in mitre_docs:
+                kb_docs.append(_mitre_to_kb_doc(mitre))
+            for kev in kev_docs:
+                kb_docs.append(_kev_to_kb_doc(kev))
 
-            logger.info("Prepared {} documents from file", len(kb_docs))
+            logger.info(
+                "Prepared {} documents (CVEs: {}, MITRE: {}, KEV: {})",
+                len(kb_docs),
+                len(cve_docs),
+                len(mitre_docs),
+                len(kev_docs),
+            )
 
-            if not dry_run:
+            if export_file:
+                # Export to JSON file for manual upload
+                import json
+                import os
+
+                export_data = [
+                    {
+                        "id": doc.id,
+                        "content": doc.content,
+                        "metadata": {
+                            "doc_type": doc.doc_type,
+                            "title": doc.title,
+                            **doc.metadata,
+                        },
+                    }
+                    for doc in kb_docs
+                ]
+
+                logger.info("Writing {} documents to file: {}", len(export_data), export_file)
+                os.makedirs(os.path.dirname(export_file) or ".", exist_ok=True)
+                with open(export_file, "w", encoding="utf-8") as f:
+                    json.dump(export_data, f, indent=2)
+                logger.info("Exported {} documents to {}", len(kb_docs), export_file)
+                logger.info("Upload this file to your Gradient Knowledge Base")
+            elif not dry_run:
                 success = await upload_to_gradient_kb(kb_docs)
                 if success:
                     logger.info("Successfully uploaded {} documents", len(kb_docs))
