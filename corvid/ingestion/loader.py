@@ -395,16 +395,33 @@ if __name__ == "__main__":
             logger.info("Loading CVEs from local file: {}", cve_file)
             cve_docs = await fetch_from_local_file(cve_file)
 
-            # Convert to KB documents
+            # Also fetch MITRE ATT&CK and CISA KEV for complete KB
+            logger.info("Fetching MITRE ATT&CK techniques...")
+            mitre_docs = await fetch_mitre_attack()
+            logger.info("Fetching CISA KEV...")
+            kev_docs = await fetch_cisa_kev()
+
+            # Convert all to KB documents
             kb_docs = []
             for cve in cve_docs:
                 kb_docs.append(_cve_to_kb_doc(cve))
+            for mitre in mitre_docs:
+                kb_docs.append(_mitre_to_kb_doc(mitre))
+            for kev in kev_docs:
+                kb_docs.append(_kev_to_kb_doc(kev))
 
-            logger.info("Prepared {} documents from file", len(kb_docs))
+            logger.info(
+                "Prepared {} documents (CVEs: {}, MITRE: {}, KEV: {})",
+                len(kb_docs),
+                len(cve_docs),
+                len(mitre_docs),
+                len(kev_docs),
+            )
 
             if export_file:
                 # Export to JSON file for manual upload
                 import json
+                import os
 
                 export_data = [
                     {
@@ -418,6 +435,9 @@ if __name__ == "__main__":
                     }
                     for doc in kb_docs
                 ]
+
+                logger.info("Writing {} documents to file: {}", len(export_data), export_file)
+                os.makedirs(os.path.dirname(export_file) or ".", exist_ok=True)
                 with open(export_file, "w", encoding="utf-8") as f:
                     json.dump(export_data, f, indent=2)
                 logger.info("Exported {} documents to {}", len(kb_docs), export_file)
