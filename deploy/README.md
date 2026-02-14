@@ -60,7 +60,7 @@ chmod +x deploy/provision.sh
 
 This creates:
 - Managed PostgreSQL database (`db-s-1vcpu-1gb`, ~$15/month)
-- Managed Redis instance (`db-s-1vcpu-1gb`, ~$15/month)
+- Managed Redis OR use Upstash/free Redis service
 
 ### 2. Configure App Platform Secrets
 
@@ -85,7 +85,39 @@ Required secrets:
 | `CORVID_ABUSEIPDB_API_KEY` | AbuseIPDB API key |
 | `CORVID_NVD_API_KEY` | NVD API key (optional) |
 
-### 3. Update App Spec
+Optional:
+| Variable | Description |
+|----------|-------------|
+| `CORVID_GRADIENT_KB_ID` | Gradient Knowledge Base ID (for CVE context in analysis) |
+
+### 3. Create a Redis Droplet (if not using managed Redis)
+
+If managed Redis is not available in your region, you can run Redis in a Docker container on a Droplet:
+
+```bash
+# Create a droplet (minimum $4/mo)
+doctl compute droplet create corvid-redis \
+  --image docker-20-04 \
+  --region sfo3 \
+  --size s-1vcpu-1gb \
+  --ssh-keys <your-ssh-key-id>
+
+# After creation, SSH in and run Redis:
+# 1. Create droplet with Docker app
+# 2. SSH in and run:
+docker run -d --name corvid-redis \
+  -p 6379:6379 \
+  redis:latest
+
+# Get the droplet IP and use as: redis://:@<droplet-ip>:6379
+```
+
+Or use **Upstash** (recommended - free serverless Redis):
+1. Sign up at https://upstash.com
+2. Create a free Redis database
+3. Copy the connection URL (format: `redis://default:pass@host:port`)
+
+### 4. Update App Spec
 
 Edit `deploy/do-app-spec.yaml`:
 ```yaml
@@ -94,7 +126,7 @@ github:
   branch: main
 ```
 
-### 4. Deploy the App
+### 5. Deploy the App
 
 ```bash
 # Create the app
@@ -104,7 +136,7 @@ doctl apps create --spec deploy/do-app-spec.yaml
 doctl apps update <app-id> --spec deploy/do-app-spec.yaml
 ```
 
-### 5. Run Database Migrations
+### 6. Run Database Migrations
 
 After deployment, run migrations against the production database:
 
@@ -116,14 +148,20 @@ export CORVID_DATABASE_URL="postgresql+asyncpg://user:pass@host:port/dbname?sslm
 alembic upgrade head
 ```
 
-### 6. (Optional) Populate Knowledge Base
+### 7. (Optional) Populate Knowledge Base
 
-If using Gradient AI for full analysis:
+If using Gradient AI for full analysis with CVE context:
 
+1. First, create a Knowledge Base in the [Gradient AI Console](https://cloud.digitalocean.com/gradient-ai-platform/knowledge-bases)
+2. Get the Knowledge Base ID
+3. Uncomment the `CORVID_GRADIENT_KB_ID` secret in `do-app-spec.yaml`
+4. Redeploy: `doctl apps update <app-id> --spec deploy/do-app-spec.yaml`
+5. Load CVEs:
 ```bash
-# Ingest CVEs, MITRE ATT&CK, and CISA KEV
-python -m corvid.ingestion.loader --years=2
+python -m corvid.ingestion.loader --cve-file=path/to/cvelistV5/cves --years=2
 ```
+
+Or use the API to populate the KB after deployment.
 
 ### 7. Verify Deployment
 

@@ -2,6 +2,11 @@
 
 Orchestrates fetching from NVD, MITRE ATT&CK, and CISA KEV,
 deduplicates documents, and uploads to the Gradient knowledge base.
+
+Supports:
+- Fetching from NVD API (default)
+- Loading from local JSON file (CVE Schema format)
+- Combining multiple sources
 """
 
 from dataclasses import dataclass
@@ -13,7 +18,12 @@ from loguru import logger
 from corvid.config import settings
 from corvid.ingestion.advisories import KEVDocument, fetch_cisa_kev
 from corvid.ingestion.mitre import MITREDocument, fetch_mitre_attack
-from corvid.ingestion.nvd import CVEDocument, fetch_nvd_cves
+from corvid.ingestion.nvd import (
+    CVEDocument,
+    fetch_nvd_cves,
+    parse_cve_schema_json,
+    parse_cve_schema_json,
+)
 
 
 @dataclass
@@ -123,6 +133,47 @@ def _deduplicate_documents(
     return cve_docs, kev_cve_ids
 
 
+async def fetch_from_local_file(
+    file_path: str,
+) -> list[CVEDocument]:
+    """Load CVE records from a local JSON file or directory.
+
+    Supports:
+    - Single JSON file with CVE Schema format
+    - Directory with CVE JSON files (CVE List V5 structure)
+
+    Args:
+        file_path: Path to JSON file or directory containing CVE files.
+
+    Returns:
+        List of CVEDocument objects.
+    """
+    import os
+    import glob
+
+    logger.info("Loading CVEs from: {}", file_path)
+
+    # Check if it's a directory
+    if os.path.isdir(file_path):
+        # Find all JSON files recursively
+        json_files = glob.glob(os.path.join(file_path, "**", "*.json"), recursive=True)
+        logger.info("Found {} JSON files in directory", len(json_files))
+
+        all_docs = []
+        for json_file in json_files:
+            try:
+                docs = parse_cve_schema_json(json_file)
+                all_docs.extend(docs)
+            except Exception as e:
+                logger.warning("Failed to parse {}: {}", json_file, e)
+
+        logger.info("Loaded {} total CVE documents from directory", len(all_docs))
+        return all_docs
+    else:
+        # Single file
+        return parse_cve_schema_json(file_path)
+
+
 async def fetch_all_sources(
     nvd_years: int = 2,
     nvd_api_key: str | None = None,
@@ -213,8 +264,14 @@ async def upload_to_gradient_kb(
     api_key = api_key or settings.gradient_api_key
     kb_id = kb_id or settings.gradient_kb_id
 
-    if not api_key or not kb_id:
-        logger.warning("Gradient API key or KB ID not configured, skipping upload")
+    if not api_key:
+        logger.warning("Gradient API key not configured, skipping KB upload")
+        return False
+
+    if not kb_id:
+        logger.warning(
+            "Gradient KB ID not configured, skipping KB upload. Set CORVID_GRADIENT_KB_ID to enable KB."
+        )
         return False
 
     logger.info(
@@ -316,15 +373,43 @@ if __name__ == "__main__":
 
     async def main() -> None:
         """Run knowledge base build from command line."""
-        # Parse simple CLI args
+        # Parse CLI args
         dry_run = "--dry-run" in sys.argv
         years = 2
+        cve_file = None
+
         for arg in sys.argv:
             if arg.startswith("--years="):
                 years = int(arg.split("=")[1])
+            elif arg.startswith("--cve-file="):
+                cve_file = arg.split("=", 1)[1]
 
-        logger.info("Building knowledge base (years={}, dry_run={})", years, dry_run)
-        docs = await build_knowledge_base(nvd_years=years, upload=not dry_run)
-        logger.info("Complete. {} documents prepared.", len(docs))
+        if cve_file:
+            # Load from local file
+            logger.info("Loading CVEs from local file: {}", cve_file)
+            cve_docs = await fetch_from_local_file(cve_file)
+
+            # Convert to KB documents
+            kb_docs = []
+            for cve in cve_docs:
+                kb_docs.append(_cve_to_kb_doc(cve))
+
+            logger.info("Prepared {} documents from file", len(kb_docs))
+
+            if not dry_run:
+                success = await upload_to_gradient_kb(kb_docs)
+                if success:
+                    logger.info("Successfully uploaded {} documents", len(kb_docs))
+                else:
+                    logger.error("Failed to upload documents")
+            else:
+                logger.info("Dry run - skipping upload")
+
+            logger.info("Complete. {} documents prepared.", len(kb_docs))
+        else:
+            # Default: fetch from NVD API
+            logger.info("Building knowledge base (years={}, dry_run={})", years, dry_run)
+            docs = await build_knowledge_base(nvd_years=years, upload=not dry_run)
+            logger.info("Complete. {} documents prepared.", len(docs))
 
     asyncio.run(main())
