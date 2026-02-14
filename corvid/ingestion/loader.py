@@ -303,7 +303,8 @@ async def upload_to_gradient_kb(
 
     # Note: This is a placeholder for the actual Gradient KB API
     # The actual endpoint and payload format may differ
-    gradient_kb_url = f"https://api.gradient.ai/v1/knowledge-bases/{kb_id}/documents"
+    # gradient_kb_url = f"https://api.gradient.ai/v1/knowledge-bases/{kb_id}/documents"
+    gradient_kb_url = f"https://kbaas.do-ai.run/v1/knowledge-bases/70db9b8c-09e4-11f1-b074-4e013e2ddde4/documents"
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         for i in range(0, len(gradient_docs), batch_size):
