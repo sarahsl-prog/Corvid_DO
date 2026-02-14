@@ -14,7 +14,7 @@ services:
     # GitHub repository configuration
     github:
       repo: sarahsl-prog/Corvid_DO  # Update with your repo
-      branch: deploy_testing 
+      branch: main 
       deploy_on_push: true
 
     # Build configuration
