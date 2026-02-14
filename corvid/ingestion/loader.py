@@ -380,12 +380,15 @@ if __name__ == "__main__":
         dry_run = "--dry-run" in sys.argv
         years = 2
         cve_file = None
+        export_file = None
 
         for arg in sys.argv:
             if arg.startswith("--years="):
                 years = int(arg.split("=")[1])
             elif arg.startswith("--cve-file="):
                 cve_file = arg.split("=", 1)[1]
+            elif arg.startswith("--export="):
+                export_file = arg.split("=", 1)[1]
 
         if cve_file:
             # Load from local file
@@ -399,7 +402,27 @@ if __name__ == "__main__":
 
             logger.info("Prepared {} documents from file", len(kb_docs))
 
-            if not dry_run:
+            if export_file:
+                # Export to JSON file for manual upload
+                import json
+
+                export_data = [
+                    {
+                        "id": doc.id,
+                        "content": doc.content,
+                        "metadata": {
+                            "doc_type": doc.doc_type,
+                            "title": doc.title,
+                            **doc.metadata,
+                        },
+                    }
+                    for doc in kb_docs
+                ]
+                with open(export_file, "w", encoding="utf-8") as f:
+                    json.dump(export_data, f, indent=2)
+                logger.info("Exported {} documents to {}", len(kb_docs), export_file)
+                logger.info("Upload this file to your Gradient Knowledge Base")
+            elif not dry_run:
                 success = await upload_to_gradient_kb(kb_docs)
                 if success:
                     logger.info("Successfully uploaded {} documents", len(kb_docs))
