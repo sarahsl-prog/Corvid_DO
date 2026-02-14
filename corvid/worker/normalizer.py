@@ -6,21 +6,13 @@ via regex and ipaddress, and automatic IOC type detection from raw values.
 
 import ipaddress
 import re
-from enum import Enum
 
 from loguru import logger
 
+from corvid.types import IOCType
 
-class IOCType(str, Enum):
-    """Supported IOC (Indicator of Compromise) types."""
-
-    IP = "ip"
-    DOMAIN = "domain"
-    URL = "url"
-    HASH_MD5 = "hash_md5"
-    HASH_SHA1 = "hash_sha1"
-    HASH_SHA256 = "hash_sha256"
-    EMAIL = "email"
+# Re-export IOCType for backwards compatibility
+__all__ = ["IOCType", "normalize_ioc", "validate_ioc", "detect_ioc_type"]
 
 
 # Compiled regex patterns for IOC format validation
