@@ -10,6 +10,10 @@ from corvid.config import settings
 
 print(f"DEBUG: CORVID_DATABASE_URL env var = {os.environ.get('CORVID_DATABASE_URL', 'NOT SET')}")
 print(f"DEBUG: settings.database_url = {settings.database_url}")
+print(f"DEBUG: All CORVID_ env vars:")
+for k, v in os.environ.items():
+    if k.startswith("CORVID_"):
+        print(f"  {k}={v[:30]}..." if len(v) > 30 else f"  {k}={v}")
 
 logger.info(
     "Database URL configured: {}",
