@@ -3,6 +3,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+#Data files
+cve_kb_export.json
+
 # C extensions
 *.so
 
