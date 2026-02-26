@@ -48,9 +48,21 @@ class TestIOCCreate:
             IOCCreate(type="not_a_type", value="10.0.0.1")
 
     def test_all_ioc_types_accepted(self) -> None:
+        # Test valid values for each IOC type
+        valid_values = {
+            IOCType.IP: "192.168.1.1",
+            IOCType.DOMAIN: "example.com",
+            IOCType.URL: "https://example.com/malware.exe",
+            IOCType.HASH_MD5: "d41d8cd98f00b204e9800998ecf8427e",
+            IOCType.HASH_SHA1: "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+            IOCType.HASH_SHA256: "a" * 64,
+            IOCType.EMAIL: "attacker@example.com",
+        }
         for ioc_type in IOCType:
-            ioc = IOCCreate(type=ioc_type, value="test_value")
+            value = valid_values[ioc_type]
+            ioc = IOCCreate(type=ioc_type, value=value)
             assert ioc.type == ioc_type
+            assert ioc.value == value
 
 
 class TestIOCResponse:

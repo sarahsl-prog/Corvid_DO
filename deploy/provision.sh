@@ -9,16 +9,22 @@
 # Usage:
 #   ./deploy/provision.sh [--region REGION] [--skip-db] [--skip-redis] [--dry-run]
 #
+# Default region: sfo3 (San Francisco 3)
+# Run with --region=nyc1 if you want New York
+#
 # This script will:
 #   1. Create a managed PostgreSQL database
 #   2. Create a managed Redis instance
 #   3. Display connection strings for App Platform secrets
 #   4. Optionally deploy the app (requires secrets to be set first)
+#
+# Note: If Redis is not available in your region, sign up for free at
+#       https://upstash.com and use Upstash Redis instead (drop-in replacement)
 
 set -euo pipefail
 
 # Configuration
-REGION="${REGION:-nyc1}"
+REGION="${REGION:-sfo3}"
 DB_NAME="corvid-db"
 DB_SIZE="db-s-1vcpu-1gb"
 REDIS_NAME="corvid-redis"
@@ -145,23 +151,32 @@ if [ "$SKIP_REDIS" = false ]; then
         if doctl databases list --format Name --no-header | grep -q "^${REDIS_NAME}$"; then
             log_warn "Redis $REDIS_NAME already exists, skipping creation"
         else
-            doctl databases create "$REDIS_NAME" \
+            if doctl databases create "$REDIS_NAME" \
                 --engine redis \
                 --version 7 \
                 --size "$DB_SIZE" \
                 --region "$REGION" \
                 --num-nodes 1 \
-                --wait
-            log_info "Redis instance created successfully"
+                --wait 2>&1; then
+                log_info "Redis instance created successfully"
+            else
+                log_error "Redis creation failed. Options:"
+                echo "  1. Use Upstash (free): https://upstash.com"
+                echo "  2. Create a droplet and run Redis in Docker"
+                echo "  3. Try a different region: ./deploy/provision.sh --region sfo3 --skip-db"
+                SKIP_REDIS=true
+            fi
         fi
 
-        # Get connection string
-        REDIS_ID=$(doctl databases list --format ID,Name --no-header | grep "$REDIS_NAME" | awk '{print $1}')
-        if [ -n "$REDIS_ID" ]; then
-            REDIS_URI=$(doctl databases connection "$REDIS_ID" --format URI --no-header)
-            echo ""
-            log_info "Redis connection string (add to App Platform secrets):"
-            echo "  CORVID_REDIS_URL=$REDIS_URI"
+        # Get connection string (if Redis was created)
+        if [ "$SKIP_REDIS" = false ]; then
+            REDIS_ID=$(doctl databases list --format ID,Name --no-header | grep "$REDIS_NAME" | awk '{print $1}')
+            if [ -n "$REDIS_ID" ]; then
+                REDIS_URI=$(doctl databases connection "$REDIS_ID" --format URI --no-header)
+                echo ""
+                log_info "Redis connection string (add to App Platform secrets):"
+                echo "  CORVID_REDIS_URL=$REDIS_URI"
+            fi
         fi
     fi
 else

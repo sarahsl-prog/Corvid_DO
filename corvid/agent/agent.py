@@ -88,15 +88,18 @@ class CorvidAgent:
         self,
         gradient_api_key: str | None = None,
         kb_id: str | None = None,
+        model: str | None = None,
     ):
         """Initialize the Corvid agent.
 
         Args:
             gradient_api_key: Gradient API key (defaults to settings).
             kb_id: Knowledge base ID (defaults to settings).
+            model: Gradient model name (defaults to settings).
         """
         self.api_key = gradient_api_key or settings.gradient_api_key
         self.kb_id = kb_id or settings.gradient_kb_id
+        self.model = model or settings.gradient_model
         self.timeout = settings.agent_timeout_seconds
 
         if not self.api_key:
@@ -248,7 +251,7 @@ Please investigate this IOC using your available tools and provide a complete an
         async with httpx.AsyncClient(timeout=float(self.timeout)) as client:
             for turn in range(max_turns):
                 request_body = {
-                    "model": "gradient-large",  # Or appropriate model
+                    "model": self.model,
                     "messages": messages,
                     "tools": [{"type": "function", "function": t} for t in self.tools],
                     "tool_choice": "auto" if turn < max_turns - 1 else "none",
@@ -281,9 +284,7 @@ Please investigate this IOC using your available tools and provide a complete an
                         tool_args = json.loads(function.get("arguments", "{}"))
 
                         # Execute tool
-                        tool_result = await self._execute_tool(
-                            tool_name, tool_args, db, audit
-                        )
+                        tool_result = await self._execute_tool(tool_name, tool_args, db, audit)
 
                         # Add tool result to messages
                         messages.append(
