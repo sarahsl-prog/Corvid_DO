@@ -20,7 +20,12 @@ import type { CyNodeData } from "../types/graph.ts";
 import type { AnalysisResultItem } from "../types/api.ts";
 
 export function DetailPanel() {
-  const { selectedNodeId, nodes, selectNode, addElements } = useGraphStore();
+  // Use selectors to prevent unnecessary re-renders
+  const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
+  const nodes = useGraphStore((state) => state.nodes);
+  const selectNode = useGraphStore((state) => state.selectNode);
+  const addElements = useGraphStore((state) => state.addElements);
+
   const { analyze, loading: expandLoading } = useAnalysis();
   const [expandError, setExpandError] = useState<string | null>(null);
 

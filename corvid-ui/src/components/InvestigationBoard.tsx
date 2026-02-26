@@ -15,7 +15,10 @@ import { LoadingOverlay } from "./LoadingOverlay.tsx";
 import { SeverityLegend } from "./SeverityLegend.tsx";
 
 export function InvestigationBoard() {
-  const { addElements, selectedNodeId } = useGraphStore();
+  // Use selectors to prevent unnecessary re-renders
+  const addElements = useGraphStore((state) => state.addElements);
+  const selectedNodeId = useGraphStore((state) => state.selectedNodeId);
+
   const { analyze, loading, error } = useAnalysis();
 
   const handleSubmit = useCallback(

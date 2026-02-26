@@ -5,7 +5,7 @@
  * node selection events, and new-node animation.
  */
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 import CytoscapeComponent from "react-cytoscapejs";
 import type cytoscape from "cytoscape";
 import Cytoscape from "cytoscape";
@@ -44,26 +44,37 @@ function getLayoutOptions(name: LayoutName): cytoscape.LayoutOptions {
 export function GraphCanvas() {
   const cyRef = useRef<cytoscape.Core | null>(null);
   const prevNodeCountRef = useRef(0);
-  const { nodes, edges, activeLayout, selectNode, setCyInstance } = useGraphStore();
+
+  // Subscribe only to rendering data (not cyInstance) to avoid re-render loops
+  const nodes = useGraphStore((state) => state.nodes);
+  const edges = useGraphStore((state) => state.edges);
+  const activeLayout = useGraphStore((state) => state.activeLayout);
+
+  // Get actions separately (these are stable references and don't cause re-renders)
+  const selectNode = useGraphStore((state) => state.selectNode);
+  const setCyInstance = useGraphStore((state) => state.setCyInstance);
 
   // Handle Cytoscape instance creation
   const handleCy = useCallback(
     (cy: cytoscape.Core) => {
-      cyRef.current = cy;
-      setCyInstance(cy);
+      // Only update if this is a new instance
+      if (cyRef.current !== cy) {
+        cyRef.current = cy;
+        setCyInstance(cy);
 
-      // Node click → select
-      cy.on("tap", "node", (evt) => {
-        const nodeId = evt.target.id();
-        selectNode(nodeId);
-      });
+        // Node click → select
+        cy.on("tap", "node", (evt) => {
+          const nodeId = evt.target.id();
+          selectNode(nodeId);
+        });
 
-      // Background click → deselect
-      cy.on("tap", (evt) => {
-        if (evt.target === cy) {
-          selectNode(null);
-        }
-      });
+        // Background click → deselect
+        cy.on("tap", (evt) => {
+          if (evt.target === cy) {
+            selectNode(null);
+          }
+        });
+      }
     },
     [selectNode, setCyInstance],
   );
@@ -104,11 +115,15 @@ export function GraphCanvas() {
     layout.run();
   }, [activeLayout, nodes.length, edges.length]);
 
-  // Build ElementsDefinition for Cytoscape
-  const elements = CytoscapeComponent.normalizeElements({
-    nodes: nodes.map((n) => ({ data: { ...n.data } })),
-    edges: edges.map((e) => ({ data: { ...e.data } })),
-  });
+  // Build ElementsDefinition for Cytoscape (memoized to prevent unnecessary re-renders)
+  const elements = useMemo(
+    () =>
+      CytoscapeComponent.normalizeElements({
+        nodes: nodes.map((n) => ({ data: { ...n.data } })),
+        edges: edges.map((e) => ({ data: { ...e.data } })),
+      }),
+    [nodes, edges],
+  );
 
   return (
     <div className="relative h-full w-full" data-testid="graph-canvas">
