@@ -74,6 +74,16 @@ class Settings(BaseSettings):
         default="", description="Gradient knowledge base ID. Optional, for RAG functionality."
     )
 
+    gradient_model: str = Field(
+        default="gradient-large",
+        description="Gradient AI model to use for agent inference (e.g. gradient-large)."
+    )
+
+    gradient_kb_url: str = Field(
+        default="",
+        description="Custom Gradient KB API URL. Leave empty to use default."
+    )
+
     # External threat intelligence API keys (OPTIONAL but recommended)
     abuseipdb_api_key: str = Field(
         default="", description="AbuseIPDB API key for IP reputation checks. Free tier available."
