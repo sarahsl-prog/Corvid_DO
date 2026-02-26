@@ -60,109 +60,116 @@ async def analyze_iocs(
     success_count = 0
     failure_count = 0
 
-    for ioc_input in request.iocs:
-        ioc_type = ioc_input.type.value
-        ioc_value = normalize_ioc(ioc_input.value)
+    # Start an explicit transaction so we can use savepoints
+    async with db.begin():
+        for ioc_input in request.iocs:
+            ioc_type = ioc_input.type.value
+            ioc_value = normalize_ioc(ioc_input.value)
 
-        try:
-            # Step 1: Create or get existing IOC record
-            ioc = await _get_or_create_ioc(db, ioc_type, ioc_value, ioc_input.tags)
-            ioc_ids.append(ioc.id)
+            # Use a savepoint (nested transaction) for each IOC so individual failures
+            # don't poison the entire transaction
+            try:
+                async with db.begin_nested():
+                    # Step 1: Create or get existing IOC record
+                    ioc = await _get_or_create_ioc(db, ioc_type, ioc_value, ioc_input.tags)
+                    ioc_ids.append(ioc.id)
 
-            # Step 2: Run enrichment
-            enrichment_results = await orchestrator.enrich_and_store(
-                db=db,
-                ioc_id=ioc.id,
-                ioc_type=ioc_type,
-                ioc_value=ioc_value,
-            )
+                    # Step 2: Run enrichment
+                    enrichment_results = await orchestrator.enrich_and_store(
+                        db=db,
+                        ioc_id=ioc.id,
+                        ioc_type=ioc_type,
+                        ioc_value=ioc_value,
+                    )
 
-            # Step 3: Invoke agent
-            agent_output = await agent.analyze_ioc(
-                ioc_type=ioc_type,
-                ioc_value=ioc_value,
-                context=request.context,
-                db=db,
-            )
+                    # Step 3: Invoke agent
+                    agent_output = await agent.analyze_ioc(
+                        ioc_type=ioc_type,
+                        ioc_value=ioc_value,
+                        context=request.context,
+                        db=db,
+                    )
 
-            # Step 4: Build enrichments dict from results
-            enrichments = {}
-            for er in enrichment_results:
-                if er.success:
-                    enrichments[er.source] = {
-                        "summary": er.summary,
-                        "raw": er.raw_response,
-                    }
+                    # Step 4: Build enrichments dict from results
+                    enrichments = {}
+                    for er in enrichment_results:
+                        if er.success:
+                            enrichments[er.source] = {
+                                "summary": er.summary,
+                                "raw": er.raw_response,
+                            }
 
-            # Step 5: Build result item
-            result_item = AnalysisResultItem(
-                ioc=ioc_input,
-                severity=agent_output.severity,
-                confidence=agent_output.confidence,
-                summary=agent_output.summary,
-                related_cves=agent_output.related_cves,
-                mitre_techniques=agent_output.mitre_techniques,
-                enrichments=enrichments,
-                recommended_actions=agent_output.recommended_actions,
-            )
-            results.append(result_item)
-            success_count += 1
+                    # Step 5: Build result item
+                    result_item = AnalysisResultItem(
+                        ioc=ioc_input,
+                        severity=agent_output.severity,
+                        confidence=agent_output.confidence,
+                        summary=agent_output.summary,
+                        related_cves=agent_output.related_cves,
+                        mitre_techniques=agent_output.mitre_techniques,
+                        enrichments=enrichments,
+                        recommended_actions=agent_output.recommended_actions,
+                    )
+                    results.append(result_item)
+                    success_count += 1
 
-            # Update IOC severity based on analysis
-            ioc.severity_score = agent_output.severity
-            ioc.last_seen = datetime.now(timezone.utc)
+                    # Update IOC severity based on analysis
+                    ioc.severity_score = agent_output.severity
+                    ioc.last_seen = datetime.now(timezone.utc)
 
-        except GuardrailError as e:
-            logger.warning("Guardrail error for IOC {}: {}", ioc_value, e)
-            failure_count += 1
-            # Add failed result with error info
-            results.append(
-                AnalysisResultItem(
-                    ioc=ioc_input,
-                    severity=0.0,
-                    confidence=0.0,
-                    summary=f"Analysis failed: {e}",
-                    related_cves=[],
-                    mitre_techniques=[],
-                    enrichments={},
-                    recommended_actions=["Retry analysis or investigate manually"],
+            except GuardrailError as e:
+                logger.warning("Guardrail error for IOC {}: {}", ioc_value, e)
+                failure_count += 1
+                # Rollback happens automatically when exiting the nested transaction context
+                # Add failed result with error info
+                results.append(
+                    AnalysisResultItem(
+                        ioc=ioc_input,
+                        severity=0.0,
+                        confidence=0.0,
+                        summary=f"Analysis failed: {e}",
+                        related_cves=[],
+                        mitre_techniques=[],
+                        enrichments={},
+                        recommended_actions=["Retry analysis or investigate manually"],
+                    )
                 )
-            )
-        except Exception as e:
-            logger.error("Analysis failed for IOC {}: {}", ioc_value, e)
-            failure_count += 1
-            results.append(
-                AnalysisResultItem(
-                    ioc=ioc_input,
-                    severity=0.0,
-                    confidence=0.0,
-                    summary=f"Analysis failed: {e}",
-                    related_cves=[],
-                    mitre_techniques=[],
-                    enrichments={},
-                    recommended_actions=["Retry analysis or investigate manually"],
+            except Exception as e:
+                logger.error("Analysis failed for IOC {}: {}", ioc_value, e)
+                failure_count += 1
+                # Rollback happens automatically when exiting the nested transaction context
+                results.append(
+                    AnalysisResultItem(
+                        ioc=ioc_input,
+                        severity=0.0,
+                        confidence=0.0,
+                        summary=f"Analysis failed: {e}",
+                        related_cves=[],
+                        mitre_techniques=[],
+                        enrichments={},
+                        recommended_actions=["Retry analysis or investigate manually"],
+                    )
                 )
-            )
 
-    # Determine overall status
-    if failure_count == 0:
-        status = "completed"
-    elif success_count == 0:
-        status = "failed"
-    else:
-        status = "partial"
+        # Determine overall status
+        if failure_count == 0:
+            status = "completed"
+        elif success_count == 0:
+            status = "failed"
+        else:
+            status = "partial"
 
-    # Store analysis record
-    analysis = Analysis(
-        ioc_ids=[str(ioc_id) for ioc_id in ioc_ids],
-        analysis_text=_build_analysis_text(results),
-        confidence=sum(r.confidence for r in results) / len(results) if results else 0.0,
-        mitre_techniques=list(set(t for r in results for t in r.mitre_techniques)),
-        recommended_actions=list(set(a for r in results for a in r.recommended_actions)),
-    )
-    db.add(analysis)
-    await db.commit()
-    await db.refresh(analysis)
+        # Store analysis record
+        analysis = Analysis(
+            ioc_ids=[str(ioc_id) for ioc_id in ioc_ids],
+            analysis_text=_build_analysis_text(results),
+            confidence=sum(r.confidence for r in results) / len(results) if results else 0.0,
+            mitre_techniques=list(set(t for r in results for t in r.mitre_techniques)),
+            recommended_actions=list(set(a for r in results for a in r.recommended_actions)),
+        )
+        db.add(analysis)
+        await db.flush()  # Flush to get ID, commit happens when exiting transaction context
+        await db.refresh(analysis)
 
     logger.info(
         "Analysis complete: id={}, status={}, success={}, failed={}",
