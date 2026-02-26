@@ -83,13 +83,17 @@ class EnrichmentOrchestrator:
         """Enrich an IOC and persist successful results to the database.
 
         Args:
-            db: Async database session.
+            db: Async database session. Caller is responsible for committing.
             ioc_id: UUID of the IOC record to attach enrichments to.
             ioc_type: The IOC type string.
             ioc_value: The IOC value.
 
         Returns:
             List of EnrichmentResults from all applicable providers.
+
+        Note:
+            This method adds enrichment records to the session but does NOT commit.
+            The caller must commit the transaction to persist changes.
         """
         results = await self.enrich_ioc(ioc_type, ioc_value)
 
@@ -103,8 +107,12 @@ class EnrichmentOrchestrator:
                 )
                 db.add(enrichment)
 
-        await db.commit()
+        # NOTE: Caller is responsible for committing the transaction.
+        # This allows the method to be used within larger transactions
+        # (e.g., nested/savepoint transactions in analysis pipeline).
         logger.info(
-            "Stored {} enrichment(s) for IOC {}", sum(1 for r in results if r.success), ioc_id
+            "Stored {} enrichment(s) for IOC {} (pending commit)",
+            sum(1 for r in results if r.success),
+            ioc_id,
         )
         return results

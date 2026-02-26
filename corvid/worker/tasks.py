@@ -79,6 +79,8 @@ async def enrich_ioc_task(
             ioc_type=ioc_type,
             ioc_value=ioc_value,
         )
+        # Commit the enrichment results (caller is now responsible for transaction)
+        await db.commit()
 
     summary = {
         "ioc_id": ioc_id,
