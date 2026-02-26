@@ -60,6 +60,16 @@ services:
         scope: RUN_TIME
         value: "gradient-large"
 
+      # Gradient KB ID (optional, for RAG functionality)
+      - key: CORVID_GRADIENT_KB_ID
+        scope: RUN_TIME
+        value: ""
+
+      # Gradient KB URL (optional, leave empty for default)
+      - key: CORVID_GRADIENT_KB_URL
+        scope: RUN_TIME
+        value: ""
+
       # AbuseIPDB API key
       - key: CORVID_ABUSEIPDB_API_KEY
         scope: RUN_TIME

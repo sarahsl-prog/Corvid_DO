@@ -81,14 +81,17 @@ Required secrets:
 | `CORVID_DATABASE_URL` | PostgreSQL connection string (use `postgresql+asyncpg://` prefix) |
 | `CORVID_REDIS_URL` | Redis connection string |
 | `CORVID_GRADIENT_API_KEY` | Gradient AI API key (from Gradient console) |
-| `CORVID_GRADIENT_MODEL` | Gradient model name (default: `gradient-large`) |
-| `CORVID_ABUSEIPDB_API_KEY` | AbuseIPDB API key |
-| `CORVID_NVD_API_KEY` | NVD API key (optional) |
+| `CORVID_ABUSEIPDB_API_KEY` | AbuseIPDB API key (optional for enrichment) |
+| `CORVID_NVD_API_KEY` | NVD API key (optional, increases rate limits) |
 
-Optional:
-| Variable | Description |
-|----------|-------------|
-| `CORVID_GRADIENT_KB_ID` | Gradient Knowledge Base ID (for CVE context in analysis) |
+Optional (have sensible defaults):
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CORVID_GRADIENT_MODEL` | `gradient-large` | Gradient model name (options: gradient-large, gradient-base) |
+| `CORVID_GRADIENT_KB_ID` | (empty) | Gradient Knowledge Base ID (for RAG with CVE context) |
+| `CORVID_GRADIENT_KB_URL` | (empty) | Custom Gradient KB URL (leave empty for default) |
+| `CORVID_DEBUG` | `false` | Enable debug mode (⚠️ must be false in production!) |
+| `CORVID_LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
 
 ### 3. Create a Redis Droplet (if not using managed Redis)
 
