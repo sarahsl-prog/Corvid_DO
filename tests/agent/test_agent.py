@@ -4,16 +4,17 @@ Tests agent initialization, analysis workflow, and guardrails.
 """
 
 import json
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-from corvid.agent.agent import CorvidAgent, SYSTEM_PROMPT, analyze_ioc
+import pytest
+
+from corvid.agent.agent import SYSTEM_PROMPT, CorvidAgent
 from corvid.agent.guardrails import (
-    validate_ioc_input,
+    AuditLogger,
+    GuardrailError,
     sanitize_context,
     validate_agent_output,
-    GuardrailError,
-    AuditLogger,
+    validate_ioc_input,
 )
 from corvid.api.models.analysis import AgentAnalysisOutput
 
@@ -57,16 +58,18 @@ class TestAgentAnalysis:
     @pytest.mark.asyncio
     async def test_analyze_ioc_returns_structured_result(self, db_session):
         """Test that analyze_ioc returns a valid AgentAnalysisOutput."""
-        mock_agent_response = json.dumps({
-            "summary": "This IP is associated with known malware distribution.",
-            "severity": 7.5,
-            "confidence": 0.8,
-            "related_cves": ["CVE-2024-21762"],
-            "mitre_techniques": ["T1071.001"],
-            "enrichment_findings": {"abuseipdb": "High abuse score"},
-            "recommended_actions": ["Block at firewall", "Monitor traffic"],
-            "related_iocs": ["evil.example.com"],
-        })
+        mock_agent_response = json.dumps(
+            {
+                "summary": "This IP is associated with known malware distribution.",
+                "severity": 7.5,
+                "confidence": 0.8,
+                "related_cves": ["CVE-2024-21762"],
+                "mitre_techniques": ["T1071.001"],
+                "enrichment_findings": {"abuseipdb": "High abuse score"},
+                "recommended_actions": ["Block at firewall", "Monitor traffic"],
+                "related_iocs": ["evil.example.com"],
+            }
+        )
 
         with patch("corvid.agent.agent.settings") as mock_settings:
             mock_settings.gradient_api_key = ""  # Use mock response
@@ -89,16 +92,18 @@ class TestAgentAnalysis:
     @pytest.mark.asyncio
     async def test_analyze_ioc_with_context(self, db_session):
         """Test that context is passed to agent prompt."""
-        mock_response = json.dumps({
-            "summary": "Analysis considering provided context.",
-            "severity": 5.0,
-            "confidence": 0.6,
-            "related_cves": [],
-            "mitre_techniques": [],
-            "enrichment_findings": {},
-            "recommended_actions": ["Investigate further"],
-            "related_iocs": [],
-        })
+        mock_response = json.dumps(
+            {
+                "summary": "Analysis considering provided context.",
+                "severity": 5.0,
+                "confidence": 0.6,
+                "related_cves": [],
+                "mitre_techniques": [],
+                "enrichment_findings": {},
+                "recommended_actions": ["Investigate further"],
+                "related_iocs": [],
+            }
+        )
 
         with patch("corvid.agent.agent.settings") as mock_settings:
             mock_settings.gradient_api_key = ""
@@ -144,6 +149,7 @@ class TestAgentAnalysis:
 
                 # Simulate API error
                 import httpx
+
                 mock_instance.post.side_effect = httpx.HTTPError("API unavailable")
 
                 agent = CorvidAgent()
@@ -218,16 +224,18 @@ class TestOutputGuardrails:
 
     def test_output_guardrails_valid_json(self):
         """Test that valid JSON output passes validation."""
-        valid_output = json.dumps({
-            "summary": "Test summary",
-            "severity": 5.0,
-            "confidence": 0.7,
-            "related_cves": ["CVE-2024-12345"],
-            "mitre_techniques": ["T1071"],
-            "enrichment_findings": {},
-            "recommended_actions": ["Action 1"],
-            "related_iocs": [],
-        })
+        valid_output = json.dumps(
+            {
+                "summary": "Test summary",
+                "severity": 5.0,
+                "confidence": 0.7,
+                "related_cves": ["CVE-2024-12345"],
+                "mitre_techniques": ["T1071"],
+                "enrichment_findings": {},
+                "recommended_actions": ["Action 1"],
+                "related_iocs": [],
+            }
+        )
 
         result = validate_agent_output(valid_output)
 
@@ -244,26 +252,30 @@ class TestOutputGuardrails:
 
     def test_output_guardrails_missing_fields(self):
         """Test that missing required fields are rejected."""
-        incomplete_output = json.dumps({
-            "summary": "Test",
-            # Missing severity, confidence, etc.
-        })
+        incomplete_output = json.dumps(
+            {
+                "summary": "Test",
+                # Missing severity, confidence, etc.
+            }
+        )
 
         with pytest.raises(GuardrailError, match="schema validation"):
             validate_agent_output(incomplete_output)
 
     def test_output_guardrails_invalid_cve_format(self):
         """Test that invalid CVE IDs are filtered out."""
-        output_with_bad_cve = json.dumps({
-            "summary": "Test",
-            "severity": 5.0,
-            "confidence": 0.5,
-            "related_cves": ["CVE-2024-12345", "FAKE-CVE", "CVE-INVALID"],
-            "mitre_techniques": [],
-            "enrichment_findings": {},
-            "recommended_actions": [],
-            "related_iocs": [],
-        })
+        output_with_bad_cve = json.dumps(
+            {
+                "summary": "Test",
+                "severity": 5.0,
+                "confidence": 0.5,
+                "related_cves": ["CVE-2024-12345", "FAKE-CVE", "CVE-INVALID"],
+                "mitre_techniques": [],
+                "enrichment_findings": {},
+                "recommended_actions": [],
+                "related_iocs": [],
+            }
+        )
 
         result = validate_agent_output(output_with_bad_cve)
 
@@ -274,16 +286,18 @@ class TestOutputGuardrails:
 
     def test_output_guardrails_invalid_mitre_format(self):
         """Test that invalid MITRE technique IDs are filtered out."""
-        output_with_bad_mitre = json.dumps({
-            "summary": "Test",
-            "severity": 5.0,
-            "confidence": 0.5,
-            "related_cves": [],
-            "mitre_techniques": ["T1071", "T1071.001", "INVALID", "X9999"],
-            "enrichment_findings": {},
-            "recommended_actions": [],
-            "related_iocs": [],
-        })
+        output_with_bad_mitre = json.dumps(
+            {
+                "summary": "Test",
+                "severity": 5.0,
+                "confidence": 0.5,
+                "related_cves": [],
+                "mitre_techniques": ["T1071", "T1071.001", "INVALID", "X9999"],
+                "enrichment_findings": {},
+                "recommended_actions": [],
+                "related_iocs": [],
+            }
+        )
 
         result = validate_agent_output(output_with_bad_mitre)
 

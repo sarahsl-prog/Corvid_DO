@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from corvid.types import IOCType
 
-
 # Compiled regex patterns for IOC format validation
 _IOC_PATTERNS: dict[IOCType, re.Pattern[str]] = {
     IOCType.HASH_MD5: re.compile(r"^[a-fA-F0-9]{32}$"),

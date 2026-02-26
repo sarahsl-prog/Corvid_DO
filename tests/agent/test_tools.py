@@ -3,13 +3,13 @@
 Tests lookup_ioc, search_cves, enrich_external, and search_kb tools.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
 
-from corvid.agent.tools.lookup_ioc import lookup_ioc
-from corvid.agent.tools.search_cves import search_cves, _search_nvd
+import pytest
+
 from corvid.agent.tools.enrich_external import enrich_ioc_external, get_available_sources
+from corvid.agent.tools.lookup_ioc import lookup_ioc
+from corvid.agent.tools.search_cves import search_cves
 from corvid.agent.tools.search_kb import search_knowledge_base
 
 
@@ -20,8 +20,8 @@ class TestLookupIOCTool:
     @pytest.mark.asyncio
     async def test_lookup_ioc_found(self, db_session):
         """Test looking up an IOC that exists in the database."""
+
         from corvid.db.models import IOC, Enrichment
-        from datetime import datetime, timezone
 
         # Create test IOC with enrichment
         ioc = IOC(
@@ -76,14 +76,8 @@ class TestSearchCVEsTool:
                 {
                     "cve": {
                         "id": "CVE-2024-21762",
-                        "descriptions": [
-                            {"lang": "en", "value": "Fortinet FortiOS vulnerability"}
-                        ],
-                        "metrics": {
-                            "cvssMetricV31": [
-                                {"cvssData": {"baseScore": 9.8}}
-                            ]
-                        },
+                        "descriptions": [{"lang": "en", "value": "Fortinet FortiOS vulnerability"}],
+                        "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 9.8}}]},
                     }
                 }
             ],
@@ -145,7 +139,9 @@ class TestEnrichExternalTool:
         mock_enrichment_result.error = None
 
         with patch("corvid.agent.tools.enrich_external._build_providers") as mock_build:
-            with patch("corvid.agent.tools.enrich_external.EnrichmentOrchestrator") as mock_orch_class:
+            with patch(
+                "corvid.agent.tools.enrich_external.EnrichmentOrchestrator"
+            ) as mock_orch_class:
                 mock_provider = MagicMock()
                 mock_provider.source_name = "urlhaus"
                 mock_provider.supported_types = ["ip", "domain", "url"]

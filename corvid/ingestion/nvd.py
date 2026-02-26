@@ -8,7 +8,7 @@ Scope for hackathon: Last 2 years of CVEs (~20k documents).
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from loguru import logger
@@ -201,7 +201,7 @@ async def fetch_nvd_cves(
         List of CVEDocument objects ready for knowledge base upload.
     """
     # Calculate date range
-    end_date = datetime.now(timezone.utc)
+    end_date = datetime.now(UTC)
     start_date = end_date - timedelta(days=years * 365)
 
     pub_start = start_date.strftime("%Y-%m-%dT00:00:00.000")
@@ -326,7 +326,7 @@ def parse_cve_schema_json(file_path: str) -> list[CVEDocument]:
 
     documents: list[CVEDocument] = []
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, encoding="utf-8") as f:
         data = json.load(f)
 
     # Handle both single record and array of records

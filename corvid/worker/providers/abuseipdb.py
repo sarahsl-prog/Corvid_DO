@@ -56,7 +56,10 @@ class AbuseIPDBProvider(BaseEnrichmentProvider):
 
                 logger.info(
                     "AbuseIPDB lookup for {}: score={}, reports={}, country={}",
-                    ioc_value, score, reports, country,
+                    ioc_value,
+                    score,
+                    reports,
+                    country,
                 )
 
                 return EnrichmentResult(

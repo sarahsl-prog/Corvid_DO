@@ -5,7 +5,7 @@ Provides endpoints for:
 - GET /{analysis_id}: Retrieve a stored analysis by ID
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -20,7 +20,7 @@ from corvid.api.models.analysis import (
     AnalyzeRequest,
     AnalyzeResponse,
 )
-from corvid.db.models import Analysis, IOC
+from corvid.db.models import IOC, Analysis
 from corvid.db.session import get_db
 from corvid.worker.normalizer import normalize_ioc
 from corvid.worker.orchestrator import EnrichmentOrchestrator
@@ -115,7 +115,7 @@ async def analyze_iocs(
 
                     # Update IOC severity based on analysis
                     ioc.severity_score = agent_output.severity
-                    ioc.last_seen = datetime.now(timezone.utc)
+                    ioc.last_seen = datetime.now(UTC)
 
             except GuardrailError as e:
                 logger.warning("Guardrail error for IOC {}: {}", ioc_value, e)
@@ -224,7 +224,7 @@ async def _get_or_create_ioc(
 
     if ioc:
         # Update last_seen and merge tags
-        ioc.last_seen = datetime.now(timezone.utc)
+        ioc.last_seen = datetime.now(UTC)
         existing_tags = set(ioc.tags or [])
         existing_tags.update(tags)
         ioc.tags = list(existing_tags)

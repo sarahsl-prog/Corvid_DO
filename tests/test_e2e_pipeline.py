@@ -14,9 +14,7 @@ from corvid.worker.orchestrator import EnrichmentOrchestrator
 class FakeProvider(BaseEnrichmentProvider):
     """Fake enrichment provider for E2E tests."""
 
-    def __init__(
-        self, name: str, types: list[str], result: EnrichmentResult
-    ) -> None:
+    def __init__(self, name: str, types: list[str], result: EnrichmentResult) -> None:
         self._name = name
         self._types = types
         self._result = result
@@ -88,29 +86,27 @@ class TestEndToEndPipeline:
     @pytest.mark.asyncio
     async def test_submit_normalize_detect(self, client) -> None:
         """Verify IOC normalization through the API layer (whitespace stripping)."""
-        resp = await client.post(
-            "/api/v1/iocs/", json={"type": "ip", "value": "  10.0.0.1  "}
-        )
+        resp = await client.post("/api/v1/iocs/", json={"type": "ip", "value": "  10.0.0.1  "})
         assert resp.status_code == 201
         # Value stored should be stripped by Pydantic validator
         assert resp.json()["value"] == "10.0.0.1"
 
     @pytest.mark.asyncio
-    async def test_enrichment_with_no_applicable_providers(
-        self, client, db_session
-    ) -> None:
+    async def test_enrichment_with_no_applicable_providers(self, client, db_session) -> None:
         """Verify enrichment gracefully returns empty for unsupported types."""
-        resp = await client.post(
-            "/api/v1/iocs/", json={"type": "email", "value": "bad@evil.com"}
-        )
+        resp = await client.post("/api/v1/iocs/", json={"type": "email", "value": "bad@evil.com"})
         assert resp.status_code == 201
         ioc_id = resp.json()["id"]
 
         # No providers support email type
         orchestrator = EnrichmentOrchestrator(
-            [FakeProvider("abuseipdb", ["ip"], EnrichmentResult(
-                source="abuseipdb", raw_response={}, summary="", success=True
-            ))]
+            [
+                FakeProvider(
+                    "abuseipdb",
+                    ["ip"],
+                    EnrichmentResult(source="abuseipdb", raw_response={}, summary="", success=True),
+                )
+            ]
         )
 
         results = await orchestrator.enrich_and_store(

@@ -116,6 +116,7 @@ async def check_db_connection() -> dict[str, Any]:
     """Check PostgreSQL database connectivity."""
     try:
         from sqlalchemy import text
+
         from corvid.db.session import async_session
 
         async with async_session() as session:

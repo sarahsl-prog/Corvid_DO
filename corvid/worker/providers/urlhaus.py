@@ -69,7 +69,9 @@ class URLhausProvider(BaseEnrichmentProvider):
 
                 logger.info(
                     "URLhaus lookup for {}: {} URL(s), threat={}",
-                    ioc_value, url_count, threat,
+                    ioc_value,
+                    url_count,
+                    threat,
                 )
 
                 return EnrichmentResult(

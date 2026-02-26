@@ -8,15 +8,12 @@ Scope: ~1,200 KEV entries - high-value dataset for identifying
 actively exploited vulnerabilities.
 """
 
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 
 import httpx
 from loguru import logger
 
-CISA_KEV_URL = (
-    "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
-)
+CISA_KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 
 
 @dataclass

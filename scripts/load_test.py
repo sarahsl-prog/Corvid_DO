@@ -24,6 +24,7 @@ import httpx
 @dataclass
 class RequestResult:
     """Result of a single request."""
+
     endpoint: str
     method: str
     status_code: int
@@ -200,7 +201,9 @@ class LoadTester:
             success_rate = 100 * stats["success"] / stats["count"]
             avg_duration = statistics.mean(stats["durations"])
             print(f"  {endpoint}")
-            print(f"    Count: {stats['count']}, Success: {success_rate:.1f}%, Avg: {avg_duration:.2f}ms")
+            print(
+                f"    Count: {stats['count']}, Success: {success_rate:.1f}%, Avg: {avg_duration:.2f}ms"
+            )
 
         print()
 

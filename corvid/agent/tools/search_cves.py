@@ -51,9 +51,7 @@ async def search_cves(
     # Search local database first
     # Check if query looks like a CVE ID
     if query_normalized.upper().startswith("CVE-"):
-        local_stmt = select(CVEReference).where(
-            CVEReference.cve_id == query_normalized.upper()
-        )
+        local_stmt = select(CVEReference).where(CVEReference.cve_id == query_normalized.upper())
     else:
         # Search in description (basic LIKE search)
         local_stmt = (
@@ -222,9 +220,7 @@ async def get_cve_details(cve_id: str) -> dict[str, Any] | None:
 
             # Extract references
             references = [
-                ref.get("url")
-                for ref in cve_data.get("references", [])
-                if ref.get("url")
+                ref.get("url") for ref in cve_data.get("references", []) if ref.get("url")
             ][:10]
 
             return {

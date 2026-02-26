@@ -11,10 +11,8 @@ Usage:
 import argparse
 import asyncio
 import sys
-from typing import Any
 
 import httpx
-
 
 TEST_IOCS = [
     {"type": "ip", "value": "8.8.8.8", "tags": ["test", "benign", "public-dns"]},

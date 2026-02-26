@@ -5,14 +5,13 @@ for an IOC. Called by the Gradient agent during analysis.
 """
 
 from typing import Any
-from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from corvid.db.models import Analysis, CVEReference, Enrichment, IOC
+from corvid.db.models import IOC, Analysis, CVEReference
 
 
 async def lookup_ioc(
@@ -130,10 +129,12 @@ async def lookup_ioc(
         "enrichments": enrichments,
         "past_analyses": past_analyses,
         "cve_references": cve_references,
-        "message": f"Found IOC with {len(enrichments)} enrichment(s) from sources: "
-        + ", ".join(e["source"] for e in enrichments)
-        if enrichments
-        else "Found IOC but no enrichments available yet.",
+        "message": (
+            f"Found IOC with {len(enrichments)} enrichment(s) from sources: "
+            + ", ".join(e["source"] for e in enrichments)
+            if enrichments
+            else "Found IOC but no enrichments available yet."
+        ),
     }
 
 

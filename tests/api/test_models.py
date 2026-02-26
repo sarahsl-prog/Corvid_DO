@@ -1,10 +1,11 @@
 """Tests for Pydantic API models (IOC and Analysis)."""
 
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
-from corvid.api.models.ioc import IOCCreate, IOCType, IOCResponse
+import pytest
+
+from corvid.api.models.ioc import IOCCreate, IOCResponse, IOCType
 
 
 class TestIOCCreate:
@@ -69,7 +70,7 @@ class TestIOCResponse:
     """Tests for IOCResponse serialization."""
 
     def test_from_dict(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = {
             "id": uuid4(),
             "type": "ip",
@@ -85,7 +86,7 @@ class TestIOCResponse:
         assert resp.severity_score == 5.5
 
     def test_severity_score_nullable(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         data = {
             "id": uuid4(),
             "type": "ip",

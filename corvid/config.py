@@ -6,7 +6,6 @@ Defaults are set for local development with Docker Compose.
 
 from pydantic_settings import BaseSettings
 
-
 """Application configuration using pydantic-settings.
 
 Environment variables are prefixed with CORVID_ (e.g. CORVID_DATABASE_URL).
@@ -19,22 +18,22 @@ Example .env file:
 """
 
 from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Global application settings loaded from environment variables.
-    
+
     The settings automatically loads from:
     1. Environment variables with CORVID_ prefix
     2. .env file in the project root
     3. Default values specified below
-    
+
     Required fields (marked with Field(...)) will cause the application
     to fail at startup if not provided, preventing accidental deployment
     with missing credentials.
     """
-    
+
     model_config = SettingsConfigDict(
         env_prefix="CORVID_",
         env_file=".env",
@@ -54,37 +53,34 @@ class Settings(BaseSettings):
     # API server configuration
     api_host: str = "0.0.0.0"
     """Host to bind the API server to. 0.0.0.0 binds to all interfaces."""
-    
+
     api_port: int = 8000
     """Port for the API server."""
 
     # Debug and logging
     debug: bool = False
     """Enable debug mode (SQL echo, verbose logging). MUST be False in production!"""
-    
+
     log_level: str = "INFO"
     """Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL"""
 
     # Gradient AI configuration (REQUIRED for agent functionality)
     gradient_api_key: str = Field(
         ...,  # Required field - no default
-        description="Gradient AI API key (dop_v1_...). Required for agent operation."
+        description="Gradient AI API key (dop_v1_...). Required for agent operation.",
     )
-    
+
     gradient_kb_id: str = Field(
-        default="",
-        description="Gradient knowledge base ID. Optional, for RAG functionality."
+        default="", description="Gradient knowledge base ID. Optional, for RAG functionality."
     )
 
     # External threat intelligence API keys (OPTIONAL but recommended)
     abuseipdb_api_key: str = Field(
-        default="",
-        description="AbuseIPDB API key for IP reputation checks. Free tier available."
+        default="", description="AbuseIPDB API key for IP reputation checks. Free tier available."
     )
-    
+
     nvd_api_key: str = Field(
-        default="",
-        description="NVD API key for CVE database queries. Increases rate limits."
+        default="", description="NVD API key for CVE database queries. Increases rate limits."
     )
 
     # Production tuning parameters
@@ -92,24 +88,20 @@ class Settings(BaseSettings):
         default=5,
         ge=1,
         le=50,
-        description="Maximum concurrent enrichment tasks. Adjust based on API rate limits."
+        description="Maximum concurrent enrichment tasks. Adjust based on API rate limits.",
     )
-    
+
     agent_timeout_seconds: int = Field(
-        default=30,
-        ge=5,
-        le=300,
-        description="Timeout for agent analysis operations in seconds."
+        default=30, ge=5, le=300, description="Timeout for agent analysis operations in seconds."
     )
-    
+
     enrichment_cache_ttl_hours: int = Field(
         default=24,
         ge=1,
         le=168,  # Max 1 week
-        description="How long to cache enrichment results in hours."
+        description="How long to cache enrichment results in hours.",
     )
 
 
 # Global settings singleton - import this from other modules
 settings = Settings()
-

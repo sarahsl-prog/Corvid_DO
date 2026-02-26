@@ -7,7 +7,7 @@ tests with a real Postgres instance.
 
 import uuid
 
-from corvid.db.models import Analysis, CVEReference, Enrichment, IOC
+from corvid.db.models import IOC, Analysis, CVEReference, Enrichment
 
 
 class TestIOCModel:

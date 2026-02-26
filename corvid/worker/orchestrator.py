@@ -25,9 +25,7 @@ class EnrichmentOrchestrator:
     def __init__(self, providers: list[BaseEnrichmentProvider]) -> None:
         self.providers = providers
 
-    async def enrich_ioc(
-        self, ioc_type: str, ioc_value: str
-    ) -> list[EnrichmentResult]:
+    async def enrich_ioc(self, ioc_type: str, ioc_value: str) -> list[EnrichmentResult]:
         """Run all applicable providers concurrently for an IOC.
 
         Args:
@@ -106,5 +104,7 @@ class EnrichmentOrchestrator:
                 db.add(enrichment)
 
         await db.commit()
-        logger.info("Stored {} enrichment(s) for IOC {}", sum(1 for r in results if r.success), ioc_id)
+        logger.info(
+            "Stored {} enrichment(s) for IOC {}", sum(1 for r in results if r.success), ioc_id
+        )
         return results

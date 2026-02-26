@@ -10,7 +10,6 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from corvid.worker.enrichment import EnrichmentResult
 from corvid.worker.orchestrator import EnrichmentOrchestrator
 from corvid.worker.tasks import _build_providers
 
@@ -98,9 +97,8 @@ async def enrich_ioc_external(
         message = f"Enrichment failed for all {total_count} sources queried."
     elif successful_count == total_count:
         source_names = [r.source for r in results if r.success]
-        message = (
-            f"Successfully enriched from {successful_count} source(s): "
-            + ", ".join(source_names)
+        message = f"Successfully enriched from {successful_count} source(s): " + ", ".join(
+            source_names
         )
     else:
         success_names = [r.source for r in results if r.success]

@@ -1,7 +1,8 @@
 """Tests for background task definitions."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestEnrichIOCTask:
@@ -20,9 +21,7 @@ class TestEnrichIOCTask:
             patch("corvid.worker.tasks.async_session") as mock_session_factory,
         ):
             mock_orch_instance = AsyncMock()
-            mock_orch_instance.enrich_and_store = AsyncMock(
-                return_value=mock_results
-            )
+            mock_orch_instance.enrich_and_store = AsyncMock(return_value=mock_results)
             MockOrch.return_value = mock_orch_instance
 
             mock_session = AsyncMock()

@@ -9,8 +9,9 @@ Usage:
 """
 
 import os
-import pytest
+
 import httpx
+import pytest
 
 # Get the deployed URL from environment
 CORVID_TEST_URL = os.environ.get("CORVID_TEST_URL", "").rstrip("/")
@@ -114,9 +115,7 @@ class TestDeployedSystem:
         response = client.post(
             f"{base_url}/api/v1/analyses/analyze",
             json={
-                "iocs": [
-                    {"type": "ip", "value": "192.0.2.50", "tags": ["smoke-test"]}
-                ],
+                "iocs": [{"type": "ip", "value": "192.0.2.50", "tags": ["smoke-test"]}],
                 "context": "Smoke test analysis",
                 "priority": "low",
             },
@@ -140,9 +139,7 @@ class TestDeployedSystem:
         analyze_response = client.post(
             f"{base_url}/api/v1/analyses/analyze",
             json={
-                "iocs": [
-                    {"type": "domain", "value": "example.com", "tags": ["smoke-test"]}
-                ],
+                "iocs": [{"type": "domain", "value": "example.com", "tags": ["smoke-test"]}],
                 "context": "Smoke test for retrieval",
                 "priority": "low",
             },
@@ -165,9 +162,7 @@ class TestDeployedSystem:
 class TestDeployedHealthChecks:
     """Additional health check tests for production."""
 
-    def test_health_check_includes_db_status(
-        self, client: httpx.Client, base_url: str
-    ) -> None:
+    def test_health_check_includes_db_status(self, client: httpx.Client, base_url: str) -> None:
         """Test that health check includes database status."""
         response = client.get(f"{base_url}/health")
 
@@ -177,9 +172,7 @@ class TestDeployedHealthChecks:
         assert "db" in data["checks"]
         assert "ok" in data["checks"]["db"]
 
-    def test_health_check_includes_redis_status(
-        self, client: httpx.Client, base_url: str
-    ) -> None:
+    def test_health_check_includes_redis_status(self, client: httpx.Client, base_url: str) -> None:
         """Test that health check includes Redis status."""
         response = client.get(f"{base_url}/health")
 
@@ -189,9 +182,7 @@ class TestDeployedHealthChecks:
         assert "redis" in data["checks"]
         assert "ok" in data["checks"]["redis"]
 
-    def test_openapi_docs_available(
-        self, client: httpx.Client, base_url: str
-    ) -> None:
+    def test_openapi_docs_available(self, client: httpx.Client, base_url: str) -> None:
         """Test that OpenAPI documentation is accessible."""
         response = client.get(f"{base_url}/docs")
         assert response.status_code == 200

@@ -4,39 +4,36 @@ Tests NVD CVE parsing, MITRE ATT&CK parsing, CISA KEV parsing,
 and the loader/coordinator functionality.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from corvid.ingestion.nvd import (
-    CVEDocument,
-    _parse_cve,
-    _extract_cvss_info,
-    fetch_nvd_cves,
-)
-from corvid.ingestion.mitre import (
-    MITREDocument,
-    _parse_technique,
-    _build_tactic_map,
-    fetch_mitre_attack,
-)
+import pytest
+
 from corvid.ingestion.advisories import (
     KEVDocument,
     _parse_kev_entry,
     fetch_cisa_kev,
 )
 from corvid.ingestion.loader import (
-    prepare_kb_documents,
     _deduplicate_documents,
+    prepare_kb_documents,
 )
-
+from corvid.ingestion.mitre import (
+    MITREDocument,
+    _build_tactic_map,
+    _parse_technique,
+    fetch_mitre_attack,
+)
+from corvid.ingestion.nvd import (
+    CVEDocument,
+    _parse_cve,
+    fetch_nvd_cves,
+)
 
 # Sample NVD API response for a CVE
 SAMPLE_NVD_CVE = {
     "cve": {
         "id": "CVE-2024-21762",
-        "descriptions": [
-            {"lang": "en", "value": "A out-of-bounds write in Fortinet FortiOS."}
-        ],
+        "descriptions": [{"lang": "en", "value": "A out-of-bounds write in Fortinet FortiOS."}],
         "published": "2024-02-09T12:00:00.000",
         "metrics": {
             "cvssMetricV31": [
@@ -50,17 +47,11 @@ SAMPLE_NVD_CVE = {
                 }
             ]
         },
-        "references": [
-            {"url": "https://fortiguard.com/advisory/FG-IR-24-015"}
-        ],
+        "references": [{"url": "https://fortiguard.com/advisory/FG-IR-24-015"}],
         "configurations": [
             {
                 "nodes": [
-                    {
-                        "cpeMatch": [
-                            {"criteria": "cpe:2.3:o:fortinet:fortios:7.4.0:*:*:*:*:*:*:*"}
-                        ]
-                    }
+                    {"cpeMatch": [{"criteria": "cpe:2.3:o:fortinet:fortios:7.4.0:*:*:*:*:*:*:*"}]}
                 ]
             }
         ],
@@ -90,7 +81,11 @@ SAMPLE_STIX_BUNDLE = {
             "name": "Application Layer Protocol",
             "description": "Adversaries may communicate using application layer protocols.",
             "external_references": [
-                {"source_name": "mitre-attack", "external_id": "T1071", "url": "https://attack.mitre.org/techniques/T1071"}
+                {
+                    "source_name": "mitre-attack",
+                    "external_id": "T1071",
+                    "url": "https://attack.mitre.org/techniques/T1071",
+                }
             ],
             "kill_chain_phases": [
                 {"kill_chain_name": "mitre-attack", "phase_name": "command-and-control"}
@@ -103,9 +98,7 @@ SAMPLE_STIX_BUNDLE = {
             "id": "attack-pattern-002",
             "name": "Web Protocols",
             "description": "Sub-technique using HTTP/HTTPS.",
-            "external_references": [
-                {"source_name": "mitre-attack", "external_id": "T1071.001"}
-            ],
+            "external_references": [{"source_name": "mitre-attack", "external_id": "T1071.001"}],
             "x_mitre_platforms": ["Windows"],
             "revoked": False,
         },
@@ -114,9 +107,7 @@ SAMPLE_STIX_BUNDLE = {
             "id": "attack-pattern-revoked",
             "name": "Revoked Technique",
             "revoked": True,
-            "external_references": [
-                {"source_name": "mitre-attack", "external_id": "T9999"}
-            ],
+            "external_references": [{"source_name": "mitre-attack", "external_id": "T9999"}],
         },
         {
             "type": "relationship",

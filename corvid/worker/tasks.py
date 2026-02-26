@@ -18,7 +18,7 @@ from corvid.worker.providers.urlhaus import URLhausProvider
 
 def _build_providers() -> list:
     """Build the list of enrichment providers from centralized settings.
-    
+
     Only includes providers for which API keys are configured.
     URLhaus and NVD can operate without keys (with rate limits).
     """
@@ -41,7 +41,7 @@ def _build_providers() -> list:
     # NVD works without a key but with stricter rate limits
     nvd_key = settings.nvd_api_key if settings.nvd_api_key else None
     providers.append(NVDProvider(api_key=nvd_key))
-    
+
     if nvd_key:
         logger.info("NVD provider enabled with API key (higher rate limits)")
     else:
@@ -83,8 +83,7 @@ async def enrich_ioc_task(
     summary = {
         "ioc_id": ioc_id,
         "results": [
-            {"source": r.source, "success": r.success, "summary": r.summary}
-            for r in results
+            {"source": r.source, "success": r.success, "summary": r.summary} for r in results
         ],
     }
     logger.info("Enrichment task complete for IOC {}: {} results", ioc_id, len(results))

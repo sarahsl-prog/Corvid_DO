@@ -3,14 +3,15 @@
 All external HTTP calls are mocked -- no real API calls are made.
 """
 
-import pytest
-import httpx
 from unittest.mock import AsyncMock, patch
+
+import httpx
+import pytest
 
 from corvid.worker.enrichment import EnrichmentResult
 from corvid.worker.providers.abuseipdb import AbuseIPDBProvider
-from corvid.worker.providers.urlhaus import URLhausProvider
 from corvid.worker.providers.nvd import NVDProvider
+from corvid.worker.providers.urlhaus import URLhausProvider
 
 # Dummy request object needed for httpx.Response.raise_for_status()
 _DUMMY_REQUEST = httpx.Request("GET", "https://test.example.com")
@@ -58,9 +59,7 @@ class TestAbuseIPDBProvider:
         assert provider.supports("hash_sha256") is False
 
     @pytest.mark.asyncio
-    async def test_unsupported_type_returns_error(
-        self, provider: AbuseIPDBProvider
-    ) -> None:
+    async def test_unsupported_type_returns_error(self, provider: AbuseIPDBProvider) -> None:
         result = await provider.enrich("domain", "evil.com")
         assert result.success is False
         assert result.error == "unsupported_type"
@@ -78,9 +77,7 @@ class TestAbuseIPDBProvider:
             },
             request=_DUMMY_REQUEST,
         )
-        with patch(
-            "corvid.worker.providers.abuseipdb.httpx.AsyncClient"
-        ) as mock_client:
+        with patch("corvid.worker.providers.abuseipdb.httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.get = AsyncMock(return_value=mock_response)
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
@@ -94,13 +91,9 @@ class TestAbuseIPDBProvider:
 
     @pytest.mark.asyncio
     async def test_http_error_handled(self, provider: AbuseIPDBProvider) -> None:
-        with patch(
-            "corvid.worker.providers.abuseipdb.httpx.AsyncClient"
-        ) as mock_client:
+        with patch("corvid.worker.providers.abuseipdb.httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
-            mock_instance.get = AsyncMock(
-                side_effect=httpx.ConnectError("connection refused")
-            )
+            mock_instance.get = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
             mock_instance.__aexit__ = AsyncMock(return_value=False)
             mock_client.return_value = mock_instance
@@ -136,10 +129,10 @@ class TestURLhausProvider:
 
     @pytest.mark.asyncio
     async def test_no_results(self, provider: URLhausProvider) -> None:
-        mock_response = httpx.Response(200, json={"query_status": "no_results"}, request=_DUMMY_REQUEST)
-        with patch(
-            "corvid.worker.providers.urlhaus.httpx.AsyncClient"
-        ) as mock_client:
+        mock_response = httpx.Response(
+            200, json={"query_status": "no_results"}, request=_DUMMY_REQUEST
+        )
+        with patch("corvid.worker.providers.urlhaus.httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.post = AsyncMock(return_value=mock_response)
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
@@ -162,9 +155,7 @@ class TestURLhausProvider:
             },
             request=_DUMMY_REQUEST,
         )
-        with patch(
-            "corvid.worker.providers.urlhaus.httpx.AsyncClient"
-        ) as mock_client:
+        with patch("corvid.worker.providers.urlhaus.httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
             mock_instance.post = AsyncMock(return_value=mock_response)
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
@@ -177,13 +168,9 @@ class TestURLhausProvider:
 
     @pytest.mark.asyncio
     async def test_http_error_handled(self, provider: URLhausProvider) -> None:
-        with patch(
-            "corvid.worker.providers.urlhaus.httpx.AsyncClient"
-        ) as mock_client:
+        with patch("corvid.worker.providers.urlhaus.httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
-            mock_instance.post = AsyncMock(
-                side_effect=httpx.ConnectError("timeout")
-            )
+            mock_instance.post = AsyncMock(side_effect=httpx.ConnectError("timeout"))
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
             mock_instance.__aexit__ = AsyncMock(return_value=False)
             mock_client.return_value = mock_instance
@@ -222,17 +209,13 @@ class TestNVDProvider:
                     {
                         "cve": {
                             "id": "CVE-2024-1234",
-                            "descriptions": [
-                                {"lang": "en", "value": "A vulnerability in..."}
-                            ],
+                            "descriptions": [{"lang": "en", "value": "A vulnerability in..."}],
                         }
                     },
                     {
                         "cve": {
                             "id": "CVE-2024-5678",
-                            "descriptions": [
-                                {"lang": "en", "value": "Another vulnerability..."}
-                            ],
+                            "descriptions": [{"lang": "en", "value": "Another vulnerability..."}],
                         }
                     },
                 ],
@@ -273,9 +256,7 @@ class TestNVDProvider:
     async def test_api_error_handled(self, provider: NVDProvider) -> None:
         with patch("corvid.worker.providers.nvd.httpx.AsyncClient") as mock_client:
             mock_instance = AsyncMock()
-            mock_instance.get = AsyncMock(
-                side_effect=httpx.ReadTimeout("timeout")
-            )
+            mock_instance.get = AsyncMock(side_effect=httpx.ReadTimeout("timeout"))
             mock_instance.__aenter__ = AsyncMock(return_value=mock_instance)
             mock_instance.__aexit__ = AsyncMock(return_value=False)
             mock_client.return_value = mock_instance

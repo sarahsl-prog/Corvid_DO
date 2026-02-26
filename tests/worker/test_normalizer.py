@@ -1,7 +1,5 @@
 """Tests for IOC normalization, validation, and type detection."""
 
-import pytest
-
 from corvid.worker.normalizer import IOCType, detect_ioc_type, normalize_ioc, validate_ioc
 
 
@@ -64,10 +62,7 @@ class TestValidateIOC:
         assert validate_ioc(IOCType.HASH_MD5, "d41d8cd98f00b204") is False
 
     def test_valid_sha1(self) -> None:
-        assert (
-            validate_ioc(IOCType.HASH_SHA1, "da39a3ee5e6b4b0d3255bfef95601890afd80709")
-            is True
-        )
+        assert validate_ioc(IOCType.HASH_SHA1, "da39a3ee5e6b4b0d3255bfef95601890afd80709") is True
 
     def test_valid_sha256(self) -> None:
         assert validate_ioc(IOCType.HASH_SHA256, "a" * 64) is True
@@ -116,9 +111,7 @@ class TestDetectIOCType:
         assert detect_ioc_type("d41d8cd98f00b204e9800998ecf8427e") == IOCType.HASH_MD5
 
     def test_detect_sha1(self) -> None:
-        assert (
-            detect_ioc_type("da39a3ee5e6b4b0d3255bfef95601890afd80709") == IOCType.HASH_SHA1
-        )
+        assert detect_ioc_type("da39a3ee5e6b4b0d3255bfef95601890afd80709") == IOCType.HASH_SHA1
 
     def test_detect_sha256(self) -> None:
         assert detect_ioc_type("a" * 64) == IOCType.HASH_SHA256

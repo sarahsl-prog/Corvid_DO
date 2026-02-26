@@ -9,9 +9,7 @@ from corvid.worker.orchestrator import EnrichmentOrchestrator
 class MockProvider(BaseEnrichmentProvider):
     """Mock enrichment provider for testing."""
 
-    def __init__(
-        self, name: str, types: list[str], result: EnrichmentResult
-    ) -> None:
+    def __init__(self, name: str, types: list[str], result: EnrichmentResult) -> None:
         self._name = name
         self._types = types
         self._result = result
@@ -102,9 +100,7 @@ class TestEnrichmentOrchestrator:
         assert results[0].source == "test_domain"
 
     @pytest.mark.asyncio
-    async def test_no_applicable_providers(
-        self, ip_provider: MockProvider
-    ) -> None:
+    async def test_no_applicable_providers(self, ip_provider: MockProvider) -> None:
         orch = EnrichmentOrchestrator([ip_provider])
         results = await orch.enrich_ioc("hash_sha256", "a" * 64)
         assert len(results) == 0
@@ -122,9 +118,7 @@ class TestEnrichmentOrchestrator:
         assert len(failed) == 1
 
     @pytest.mark.asyncio
-    async def test_normalizes_ioc_value(
-        self, ip_provider: MockProvider
-    ) -> None:
+    async def test_normalizes_ioc_value(self, ip_provider: MockProvider) -> None:
         orch = EnrichmentOrchestrator([ip_provider])
         results = await orch.enrich_ioc("ip", "  10.0.0.1  ")
         assert len(results) == 1

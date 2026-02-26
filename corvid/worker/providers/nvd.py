@@ -64,8 +64,11 @@ class NVDProvider(BaseEnrichmentProvider):
                 return EnrichmentResult(
                     source=self.source_name,
                     raw_response={"total_results": total, "cves": cves},
-                    summary=f"NVD: {total} CVE(s) found. Top: {top_ids}" if top_ids
-                    else f"NVD: {total} CVE(s) found.",
+                    summary=(
+                        f"NVD: {total} CVE(s) found. Top: {top_ids}"
+                        if top_ids
+                        else f"NVD: {total} CVE(s) found."
+                    ),
                     success=True,
                 )
         except httpx.HTTPError as e:

@@ -22,7 +22,6 @@ from corvid.ingestion.nvd import (
     CVEDocument,
     fetch_nvd_cves,
     parse_cve_schema_json,
-    parse_cve_schema_json,
 )
 
 
@@ -148,8 +147,8 @@ async def fetch_from_local_file(
     Returns:
         List of CVEDocument objects.
     """
-    import os
     import glob
+    import os
 
     logger.info("Loading CVEs from: {}", file_path)
 
@@ -306,7 +305,7 @@ async def upload_to_gradient_kb(
     if settings.gradient_kb_url:
         gradient_kb_url = f"{settings.gradient_kb_url}/documents"
     else:
-        gradient_kb_url = f"https://kbaas.do-ai.run/v1/knowledge-bases/70db9b8c-09e4-11f1-b074-4e013e2ddde4/documents"
+        gradient_kb_url = "https://kbaas.do-ai.run/v1/knowledge-bases/70db9b8c-09e4-11f1-b074-4e013e2ddde4/documents"
 
     async with httpx.AsyncClient(timeout=60.0) as client:
         for i in range(0, len(gradient_docs), batch_size):

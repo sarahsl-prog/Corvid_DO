@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from corvid.api.models.ioc import IOCCreate, IOCType
+from corvid.api.models.ioc import IOCCreate
 
 
 class AnalysisResponse(BaseModel):

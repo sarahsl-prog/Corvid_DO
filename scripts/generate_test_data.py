@@ -22,13 +22,29 @@ import httpx
 # Sample realistic-looking test data (using documentation/test ranges)
 TEST_IPS = [
     # RFC 5737 documentation blocks
-    "192.0.2.1", "192.0.2.50", "192.0.2.100", "192.0.2.200",
-    "198.51.100.1", "198.51.100.50", "198.51.100.100", "198.51.100.200",
-    "203.0.113.1", "203.0.113.50", "203.0.113.100", "203.0.113.200",
+    "192.0.2.1",
+    "192.0.2.50",
+    "192.0.2.100",
+    "192.0.2.200",
+    "198.51.100.1",
+    "198.51.100.50",
+    "198.51.100.100",
+    "198.51.100.200",
+    "203.0.113.1",
+    "203.0.113.50",
+    "203.0.113.100",
+    "203.0.113.200",
     # Private ranges for testing
-    "10.0.0.1", "10.0.0.50", "10.1.1.1", "10.255.255.1",
-    "172.16.0.1", "172.16.0.50", "172.31.255.1",
-    "192.168.1.1", "192.168.1.100", "192.168.10.1",
+    "10.0.0.1",
+    "10.0.0.50",
+    "10.1.1.1",
+    "10.255.255.1",
+    "172.16.0.1",
+    "172.16.0.50",
+    "172.31.255.1",
+    "192.168.1.1",
+    "192.168.1.100",
+    "192.168.10.1",
 ]
 
 TEST_DOMAINS = [
@@ -51,20 +67,40 @@ TEST_DOMAINS = [
 
 # Common tags for threat intelligence
 TAGS = [
-    "malware", "c2", "botnet", "phishing", "ransomware",
-    "apt", "trojan", "backdoor", "exploit", "scanner",
-    "spam", "dga", "tor-exit", "vpn", "proxy",
-    "suspicious", "high-priority", "needs-review",
+    "malware",
+    "c2",
+    "botnet",
+    "phishing",
+    "ransomware",
+    "apt",
+    "trojan",
+    "backdoor",
+    "exploit",
+    "scanner",
+    "spam",
+    "dga",
+    "tor-exit",
+    "vpn",
+    "proxy",
+    "suspicious",
+    "high-priority",
+    "needs-review",
 ]
 
 # Threat actor tags
 THREAT_ACTORS = [
-    "apt28", "apt29", "lazarus", "fin7", "cobalt-group",
+    "apt28",
+    "apt29",
+    "lazarus",
+    "fin7",
+    "cobalt-group",
 ]
 
 # Campaign tags
 CAMPAIGNS = [
-    "campaign-alpha", "operation-sunrise", "dark-phoenix",
+    "campaign-alpha",
+    "operation-sunrise",
+    "dark-phoenix",
 ]
 
 

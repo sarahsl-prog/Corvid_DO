@@ -102,11 +102,13 @@ async def enrich_ioc(ioc_id: UUID, db: AsyncSession = Depends(get_db)) -> dict:
     if not ioc:
         raise HTTPException(status_code=404, detail="IOC not found")
 
-    logger.info("Enrichment requested for IOC: id={}, type={}, value={}", ioc.id, ioc.type, ioc.value)
+    logger.info(
+        "Enrichment requested for IOC: id={}, type={}, value={}", ioc.id, ioc.type, ioc.value
+    )
 
     # Import here to avoid circular imports at module level
-    from corvid.worker.tasks import _build_providers
     from corvid.worker.orchestrator import EnrichmentOrchestrator
+    from corvid.worker.tasks import _build_providers
 
     providers = _build_providers()
     orchestrator = EnrichmentOrchestrator(providers)
@@ -118,7 +120,6 @@ async def enrich_ioc(ioc_id: UUID, db: AsyncSession = Depends(get_db)) -> dict:
         "status": "enrichment_complete",
         "ioc_id": str(ioc.id),
         "results": [
-            {"source": r.source, "success": r.success, "summary": r.summary}
-            for r in results
+            {"source": r.source, "success": r.success, "summary": r.summary} for r in results
         ],
     }

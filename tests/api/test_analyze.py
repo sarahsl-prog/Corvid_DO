@@ -3,9 +3,9 @@
 Tests the full analysis pipeline from API request to response.
 """
 
-import json
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from corvid.api.models.analysis import AgentAnalysisOutput
 
@@ -219,8 +219,10 @@ class TestAnalyzeEndpoint:
     async def test_analyze_stores_analysis_in_db(self, client, db_session):
         """Test that analysis is stored in the database."""
         from uuid import UUID
-        from corvid.db.models import Analysis
+
         from sqlalchemy import select
+
+        from corvid.db.models import Analysis
 
         mock_output = AgentAnalysisOutput(
             summary="Test analysis",
