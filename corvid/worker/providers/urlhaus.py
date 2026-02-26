@@ -4,6 +4,8 @@ Queries the URLhaus API for malicious URL, domain, and IP intelligence.
 URLhaus is a free, community-driven service -- no API key required.
 """
 
+import json
+
 import httpx
 from loguru import logger
 
@@ -52,7 +54,22 @@ class URLhausProvider(BaseEnrichmentProvider):
                     data=param_map[ioc_type],
                 )
                 resp.raise_for_status()
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except json.JSONDecodeError as e:
+                    logger.error(
+                        "URLhaus returned invalid JSON for {}: {}", ioc_value, e
+                    )
+                    return EnrichmentResult(
+                        source=self.source_name,
+                        raw_response={
+                            "error": "invalid_json",
+                            "preview": resp.text[:500],
+                        },
+                        summary="",
+                        success=False,
+                        error=f"Invalid JSON response: {e}",
+                    )
 
                 status = data.get("query_status", "unknown")
                 if status == "no_results":

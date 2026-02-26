@@ -4,6 +4,8 @@ Queries the AbuseIPDB v2 API for IP reputation data including
 abuse confidence score, total reports, country, ISP, and usage type.
 """
 
+import json
+
 import httpx
 from loguru import logger
 
@@ -48,7 +50,22 @@ class AbuseIPDBProvider(BaseEnrichmentProvider):
                     headers={"Key": self.api_key, "Accept": "application/json"},
                 )
                 resp.raise_for_status()
-                data = resp.json().get("data", {})
+                try:
+                    data = resp.json().get("data", {})
+                except json.JSONDecodeError as e:
+                    logger.error(
+                        "AbuseIPDB returned invalid JSON for {}: {}", ioc_value, e
+                    )
+                    return EnrichmentResult(
+                        source=self.source_name,
+                        raw_response={
+                            "error": "invalid_json",
+                            "preview": resp.text[:500],
+                        },
+                        summary="",
+                        success=False,
+                        error=f"Invalid JSON response: {e}",
+                    )
 
                 score = data.get("abuseConfidenceScore", 0)
                 reports = data.get("totalReports", 0)

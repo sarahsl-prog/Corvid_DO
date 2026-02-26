@@ -1,0 +1,32 @@
+Hi Sarah,
+
+I've completed the code review fixes for the Corvid_DO project. Here's the summary:
+
+BRANCH: fix/issues-20-30-batch-fixes
+PR: https://github.com/sarahsl-prog/Corvid_DO/compare/fix/issues-20-30-batch-fixes
+
+ISSUES FIXED:
+
+#20 (HIGH) - Tool calling disabled on agent retry
+Fixed max_turns logic to allow tool calls during retries.
+
+#21 (MEDIUM) - Redis connection resource leak
+Moved client.aclose() to finally block.
+
+#23 (MEDIUM) - Database URL logging credentials exposure
+Added _mask_db_url() helper using urllib.parse.
+
+#24 (MEDIUM) - JSON decode error handling
+Added handling to AbuseIPDB, URLhaus, and NVD providers.
+
+#26 (MEDIUM) - Provider instances recreated on every API call
+Added singleton cache for providers.
+
+#30 (LOW) - Duplicate docstring in config.py
+Consolidated duplicate docstrings.
+
+VALIDATION: 162 tests passing
+
+Remaining lower priority issues: #22, #25, #27
+
+-Gryphon

@@ -8,12 +8,15 @@ from typing import Any
 
 from loguru import logger
 
-from corvid.config import settings  # Import settings instead of using os.getenv
+from corvid.config import settings
 from corvid.db.session import async_session
 from corvid.worker.orchestrator import EnrichmentOrchestrator
 from corvid.worker.providers.abuseipdb import AbuseIPDBProvider
 from corvid.worker.providers.nvd import NVDProvider
 from corvid.worker.providers.urlhaus import URLhausProvider
+
+# Singleton cache for providers to avoid recreating on every call
+_providers_cache: list | None = None
 
 
 def _build_providers() -> list:
@@ -21,7 +24,13 @@ def _build_providers() -> list:
 
     Only includes providers for which API keys are configured.
     URLhaus and NVD can operate without keys (with rate limits).
+
+    Results are cached to avoid recreating providers on every API call.
     """
+    global _providers_cache
+    if _providers_cache is not None:
+        return _providers_cache
+
     providers = []
 
     # AbuseIPDB requires an API key
@@ -50,7 +59,19 @@ def _build_providers() -> list:
             "Set CORVID_NVD_API_KEY for higher limits."
         )
 
+    _providers_cache = providers
     return providers
+
+
+def invalidate_providers_cache() -> None:
+    """Invalidate the providers cache.
+
+    Call this after configuration changes to force recreation of providers
+    on the next _build_providers() call.
+    """
+    global _providers_cache
+    _providers_cache = None
+    logger.info("Providers cache invalidated")
 
 
 async def enrich_ioc_task(
@@ -79,6 +100,8 @@ async def enrich_ioc_task(
             ioc_type=ioc_type,
             ioc_value=ioc_value,
         )
+        # Commit the enrichment results (caller is responsible for transaction)
+        await db.commit()
 
     summary = {
         "ioc_id": ioc_id,

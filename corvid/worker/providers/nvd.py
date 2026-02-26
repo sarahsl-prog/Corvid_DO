@@ -5,6 +5,8 @@ NVD doesn't directly index IOCs, so this uses keyword search to find
 related CVEs -- most useful when the IOC is associated with known software.
 """
 
+import json
+
 import httpx
 from loguru import logger
 
@@ -44,7 +46,22 @@ class NVDProvider(BaseEnrichmentProvider):
                     headers=headers,
                 )
                 resp.raise_for_status()
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except json.JSONDecodeError as e:
+                    logger.error(
+                        "NVD returned invalid JSON for {}: {}", ioc_value, e
+                    )
+                    return EnrichmentResult(
+                        source=self.source_name,
+                        raw_response={
+                            "error": "invalid_json",
+                            "preview": resp.text[:500],
+                        },
+                        summary="",
+                        success=False,
+                        error=f"Invalid JSON response: {e}",
+                    )
 
                 total = data.get("totalResults", 0)
                 cves = []
