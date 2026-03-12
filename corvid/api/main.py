@@ -7,9 +7,13 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
+from corvid.api.limiter import limiter
 from corvid.api.routes import analyses, iocs
 from corvid.config import settings
 
@@ -55,6 +59,19 @@ app = FastAPI(
     description="AI-powered cybersecurity threat intelligence platform",
     lifespan=lifespan,
 )
+
+# CORS — must be added before other middleware so preflight requests are handled first
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Rate limiting — attach limiter to app state and register 429 handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.middleware("http")
@@ -129,16 +146,17 @@ async def check_db_connection() -> dict[str, Any]:
 
 async def check_redis_connection() -> dict[str, Any]:
     """Check Redis connectivity."""
-    try:
-        import redis.asyncio as redis
+    import redis.asyncio as redis
 
-        client = redis.from_url(settings.redis_url, decode_responses=True)
+    client = redis.from_url(settings.redis_url, decode_responses=True)
+    try:
         await client.ping()
-        await client.aclose()
         return {"ok": True, "message": "Connected"}
     except Exception as e:
         logger.warning("Redis health check failed: {}", e)
         return {"ok": False, "message": str(e)}
+    finally:
+        await client.aclose()
 
 
 async def check_gradient_connection() -> dict[str, Any]:
@@ -153,9 +171,15 @@ async def check_gradient_connection() -> dict[str, Any]:
                 "https://api.gradient.ai/v1/models",
                 headers={"Authorization": f"Bearer {settings.gradient_api_key}"},
             )
-            if resp.status_code in (200, 401, 403):
-                # 401/403 means API is reachable but key may be invalid
-                return {"ok": True, "message": "API reachable"}
+            if resp.status_code == 200:
+                return {"ok": True, "message": "Connected"}
+            elif resp.status_code in (401, 403):
+                # 401/403 means API is reachable but key is invalid
+                return {
+                    "ok": False,
+                    "message": f"Authentication failed (HTTP {resp.status_code}). "
+                    "Check CORVID_GRADIENT_API_KEY.",
+                }
             return {"ok": False, "message": f"HTTP {resp.status_code}"}
     except Exception as e:
         logger.warning("Gradient health check failed: {}", e)

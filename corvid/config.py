@@ -1,15 +1,8 @@
 """Application configuration using pydantic-settings.
 
 Environment variables are prefixed with CORVID_ (e.g. CORVID_DATABASE_URL).
-Defaults are set for local development with Docker Compose.
-"""
-
-from pydantic_settings import BaseSettings
-
-"""Application configuration using pydantic-settings.
-
-Environment variables are prefixed with CORVID_ (e.g. CORVID_DATABASE_URL).
 All sensitive values MUST be provided via .env file or environment variables.
+Defaults are set for local development with Docker Compose.
 
 Example .env file:
     CORVID_DATABASE_URL=postgresql+asyncpg://user:pass@localhost/db
@@ -18,7 +11,7 @@ Example .env file:
 """
 
 from pydantic import Field
-from pydantic_settings import SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -91,6 +84,28 @@ class Settings(BaseSettings):
 
     nvd_api_key: str = Field(
         default="", description="NVD API key for CVE database queries. Increases rate limits."
+    )
+
+    # CORS configuration
+    cors_origins: list[str] = Field(
+        default=["http://localhost:5173", "http://localhost:3000"],
+        description="Allowed CORS origins for browser clients. "
+        "Includes Vite dev server (5173) and common alternatives.",
+    )
+
+    # Rate limiting
+    rate_limit_per_minute: int = Field(
+        default=100,
+        ge=1,
+        le=10000,
+        description="Default API rate limit per minute per IP address.",
+    )
+
+    rate_limit_analyze_per_minute: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Rate limit for the analysis endpoint (compute-intensive operation).",
     )
 
     # Production tuning parameters

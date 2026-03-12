@@ -246,7 +246,7 @@ Please investigate this IOC using your available tools and provide a complete an
             {"role": "user", "content": user_message},
         ]
 
-        max_turns = 1 if is_retry else 10  # Limit tool calling turns
+        max_turns = 10  # Limit tool calling turns (use same limit for retries)
 
         async with httpx.AsyncClient(timeout=float(self.timeout)) as client:
             for turn in range(max_turns):
@@ -342,12 +342,40 @@ Please investigate this IOC using your available tools and provide a complete an
                         max_results=args.get("max_results", 5),
                     )
             elif tool_name == "enrich_ioc_external":
-                result = await enrich_ioc_external(
-                    ioc_type=args.get("ioc_type", ""),
-                    ioc_value=args.get("ioc_value", ""),
-                    sources=args.get("sources"),
-                    db=db,
-                )
+                if db is None:
+                    result = {"error": "Database session not available"}
+                else:
+                    # Look up IOC ID for database storage
+                    from sqlalchemy import select
+                    from corvid.db.models import IOC
+
+                    ioc_type = args.get("ioc_type", "")
+                    ioc_value = args.get("ioc_value", "")
+                    stmt = select(IOC.id).where(
+                        IOC.type == ioc_type, IOC.value == ioc_value
+                    )
+                    ioc_result = await db.execute(stmt)
+                    ioc_id = ioc_result.scalar_one_or_none()
+
+                    if ioc_id is None:
+                        # IOC doesn't exist yet, create it first
+                        ioc = IOC(
+                            type=ioc_type,
+                            value=ioc_value,
+                            tags=[],
+                        )
+                        db.add(ioc)
+                        await db.flush()  # Get the ID without committing
+                        ioc_id = ioc.id
+                        logger.info("Created new IOC {} for enrichment", ioc_id)
+
+                    result = await enrich_ioc_external(
+                        ioc_type=ioc_type,
+                        ioc_value=ioc_value,
+                        sources=args.get("sources"),
+                        db=db,
+                        ioc_id=ioc_id,
+                    )
             elif tool_name == "search_knowledge_base":
                 result = await search_knowledge_base(
                     query=args.get("query", ""),

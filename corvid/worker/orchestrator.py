@@ -5,11 +5,13 @@ and optionally persists results to the database.
 """
 
 import asyncio
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from corvid.config import settings
 from corvid.db.models import Enrichment
 from corvid.worker.enrichment import BaseEnrichmentProvider, EnrichmentResult
 from corvid.worker.normalizer import normalize_ioc
@@ -104,6 +106,8 @@ class EnrichmentOrchestrator:
                     source=result.source,
                     raw_response=result.raw_response,
                     summary=result.summary,
+                    ttl_expires_at=datetime.now(UTC)
+                    + timedelta(hours=settings.enrichment_cache_ttl_hours),
                 )
                 db.add(enrichment)
 
