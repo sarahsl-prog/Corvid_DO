@@ -4,6 +4,7 @@ Queries both the local cve_references table and the NVD API
 to find relevant vulnerabilities.
 """
 
+import re
 from typing import Any
 
 import httpx
@@ -15,6 +16,22 @@ from corvid.config import settings
 from corvid.db.models import CVEReference
 
 NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+
+
+def _escape_sql_like(value: str) -> str:
+    """Escape SQL LIKE special characters to prevent injection.
+
+    SQL LIKE uses % and _ as wildcards. We escape them with backslash
+    to treat them as literal characters in the search.
+
+    Args:
+        value: The user input to escape.
+
+    Returns:
+        Escaped string safe for SQL LIKE patterns.
+    """
+    # Escape backslash first, then % and _
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 async def search_cves(
@@ -53,10 +70,12 @@ async def search_cves(
     if query_normalized.upper().startswith("CVE-"):
         local_stmt = select(CVEReference).where(CVEReference.cve_id == query_normalized.upper())
     else:
-        # Search in description (basic LIKE search)
+        # Search in description using escaped LIKE pattern (safe from SQL injection)
+        # Escape % and _ wildcards to prevent them from being interpreted as SQL wildcards
+        safe_pattern = f"%{_escape_sql_like(query_normalized)}%"
         local_stmt = (
             select(CVEReference)
-            .where(CVEReference.description.ilike(f"%{query_normalized}%"))
+            .where(CVEReference.description.ilike(safe_pattern, escape="\\"))
             .limit(max_results)
         )
 
