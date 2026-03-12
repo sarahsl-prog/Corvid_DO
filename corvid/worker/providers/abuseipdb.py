@@ -5,6 +5,7 @@ abuse confidence score, total reports, country, ISP, and usage type.
 """
 
 import json
+import re
 
 import httpx
 from loguru import logger
@@ -12,6 +13,29 @@ from loguru import logger
 from corvid.worker.enrichment import BaseEnrichmentProvider, EnrichmentResult
 
 ABUSEIPDB_API_URL = "https://api.abuseipdb.com/api/v2/check"
+
+# Patterns to redact from logs (API keys, tokens, auth headers)
+_SENSITIVE_PATTERNS = [
+    re.compile(r'[Kk]ey[=:]\s*\S+', re.IGNORECASE),
+    re.compile(r'[Aa]uthorization[=:]\s*\S+', re.IGNORECASE),
+    re.compile(r'[Tt]oken[=:]\s*\S+', re.IGNORECASE),
+    re.compile(r'[Aa]pi[_-]?[Kk]ey[=:]?\s*\S+', re.IGNORECASE),
+]
+
+
+def _sanitize_error(error_msg: str) -> str:
+    """Redact sensitive patterns from error messages before logging.
+
+    Args:
+        error_msg: The original error message.
+
+    Returns:
+        Sanitized message with sensitive values replaced with [REDACTED].
+    """
+    result = error_msg
+    for pattern in _SENSITIVE_PATTERNS:
+        result = pattern.sub('[REDACTED]', result)
+    return result
 
 
 class AbuseIPDBProvider(BaseEnrichmentProvider):
@@ -53,8 +77,9 @@ class AbuseIPDBProvider(BaseEnrichmentProvider):
                 try:
                     data = resp.json().get("data", {})
                 except json.JSONDecodeError as e:
+                    sanitized_error = _sanitize_error(str(e))
                     logger.error(
-                        "AbuseIPDB returned invalid JSON for {}: {}", ioc_value, e
+                        "AbuseIPDB returned invalid JSON for {}: {}", ioc_value, sanitized_error
                     )
                     return EnrichmentResult(
                         source=self.source_name,
@@ -64,7 +89,7 @@ class AbuseIPDBProvider(BaseEnrichmentProvider):
                         },
                         summary="",
                         success=False,
-                        error=f"Invalid JSON response: {e}",
+                        error=f"Invalid JSON response: {sanitized_error}",
                     )
 
                 score = data.get("abuseConfidenceScore", 0)
@@ -86,11 +111,12 @@ class AbuseIPDBProvider(BaseEnrichmentProvider):
                     success=True,
                 )
         except httpx.HTTPError as e:
-            logger.error("AbuseIPDB lookup failed for {}: {}", ioc_value, e)
+            sanitized_error = _sanitize_error(str(e))
+            logger.error("AbuseIPDB lookup failed for {}: {}", ioc_value, sanitized_error)
             return EnrichmentResult(
                 source=self.source_name,
                 raw_response={},
                 summary="",
                 success=False,
-                error=str(e),
+                error=sanitized_error,
             )
