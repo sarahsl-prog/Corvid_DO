@@ -7,7 +7,14 @@ from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from corvid.api.models.ioc import IOCCreate, IOCListResponse, IOCResponse
+from corvid.api.models.ioc import (
+    IOCBulkImportRequest,
+    IOCBulkImportResponse,
+    IOCBulkImportResult,
+    IOCCreate,
+    IOCListResponse,
+    IOCResponse,
+)
 from corvid.db.models import IOC
 from corvid.db.session import get_db
 
@@ -43,6 +50,81 @@ async def create_ioc(ioc_in: IOCCreate, db: AsyncSession = Depends(get_db)) -> I
     await db.refresh(ioc)
     logger.info("IOC created: id={}", ioc.id)
     return ioc
+
+
+@router.post("/bulk", response_model=IOCBulkImportResponse, status_code=207)
+async def bulk_import_iocs(
+    body: IOCBulkImportRequest, db: AsyncSession = Depends(get_db)
+) -> IOCBulkImportResponse:
+    """Bulk import IOCs (1–500 per request).
+
+    Each IOC is processed independently using the same dedup logic as the single-create
+    endpoint. Per-IOC failures are isolated via savepoints so that one bad entry does not
+    roll back the entire batch.
+
+    Returns 207 Multi-Status with per-IOC outcomes and summary counts.
+    """
+    logger.info("Bulk IOC import started: {} IOCs submitted", len(body.iocs))
+
+    results: list[IOCBulkImportResult] = []
+    created = updated = failed = 0
+
+    for idx, ioc_in in enumerate(body.iocs):
+        try:
+            # Savepoint isolates this IOC — a failure here won't abort the outer transaction.
+            async with db.begin_nested():
+                stmt = select(IOC).where(
+                    IOC.type == ioc_in.type.value, IOC.value == ioc_in.value
+                )
+                result = await db.execute(stmt)
+                existing = result.scalar_one_or_none()
+
+                if existing:
+                    existing.last_seen = func.now()
+                    existing.tags = list(set(existing.tags or []) | set(ioc_in.tags))
+                    await db.flush()
+                    await db.refresh(existing)
+                    results.append(
+                        IOCBulkImportResult(
+                            index=idx, status="updated", ioc_id=str(existing.id)
+                        )
+                    )
+                    updated += 1
+                else:
+                    ioc = IOC(type=ioc_in.type.value, value=ioc_in.value, tags=ioc_in.tags)
+                    db.add(ioc)
+                    await db.flush()
+                    await db.refresh(ioc)
+                    results.append(
+                        IOCBulkImportResult(index=idx, status="created", ioc_id=str(ioc.id))
+                    )
+                    created += 1
+
+        except Exception as exc:
+            logger.warning(
+                "Bulk import: IOC at index {} failed (type={}, value={}): {}",
+                idx,
+                ioc_in.type.value,
+                ioc_in.value,
+                exc,
+            )
+            results.append(
+                IOCBulkImportResult(index=idx, status="failed", error=str(exc))
+            )
+            failed += 1
+
+    await db.commit()
+
+    logger.info(
+        "Bulk IOC import complete: created={}, updated={}, failed={}", created, updated, failed
+    )
+    return IOCBulkImportResponse(
+        total=len(body.iocs),
+        created=created,
+        updated=updated,
+        failed=failed,
+        results=results,
+    )
 
 
 @router.get("/", response_model=IOCListResponse)

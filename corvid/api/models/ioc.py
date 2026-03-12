@@ -86,3 +86,44 @@ class IOCListResponse(BaseModel):
 
     items: list[IOCResponse]
     total: int
+
+
+class IOCBulkImportRequest(BaseModel):
+    """Request model for bulk IOC import (1–500 IOCs per call)."""
+
+    iocs: list[IOCCreate] = Field(..., min_length=1, max_length=500)
+
+
+class IOCBulkImportResult(BaseModel):
+    """Per-IOC outcome within a bulk import response."""
+
+    index: int
+    """Zero-based index of the IOC in the original request list."""
+
+    status: str
+    """Outcome: 'created', 'updated', or 'failed'."""
+
+    ioc_id: str | None = None
+    """UUID of the created/updated IOC, or None on failure."""
+
+    error: str | None = None
+    """Human-readable error message when status is 'failed'."""
+
+
+class IOCBulkImportResponse(BaseModel):
+    """Response model for bulk IOC import with per-IOC results and summary counts."""
+
+    total: int
+    """Total number of IOCs submitted."""
+
+    created: int
+    """Number of new IOC records created."""
+
+    updated: int
+    """Number of existing IOC records updated (dedup)."""
+
+    failed: int
+    """Number of IOCs that could not be processed."""
+
+    results: list[IOCBulkImportResult]
+    """Per-IOC outcome details in the same order as the request."""
