@@ -116,6 +116,9 @@ async def enrich_ioc(ioc_id: UUID, db: AsyncSession = Depends(get_db)) -> dict:
         db=db, ioc_id=ioc.id, ioc_type=ioc.type, ioc_value=ioc.value
     )
 
+    # Commit the enrichment results (caller is now responsible for transaction)
+    await db.commit()
+
     return {
         "status": "enrichment_complete",
         "ioc_id": str(ioc.id),

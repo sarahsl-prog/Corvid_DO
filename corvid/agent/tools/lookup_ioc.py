@@ -4,6 +4,7 @@ Returns enrichment data, past analyses, severity scores, and tags
 for an IOC. Called by the Gradient agent during analysis.
 """
 
+from datetime import datetime, UTC
 from typing import Any
 
 from loguru import logger
@@ -64,9 +65,18 @@ async def lookup_ioc(
             "Consider using enrich_external tool to gather threat intel.",
         }
 
-    # Build enrichment summaries
+    # Build enrichment summaries (filter out expired ones)
     enrichments = []
+    now = datetime.now(UTC)
     for enrichment in ioc.enrichments:
+        # Skip expired enrichments
+        if enrichment.ttl_expires_at and enrichment.ttl_expires_at < now:
+            logger.debug(
+                "Skipping expired enrichment from {} for IOC {}",
+                enrichment.source,
+                ioc.id,
+            )
+            continue
         enrichments.append(
             {
                 "source": enrichment.source,

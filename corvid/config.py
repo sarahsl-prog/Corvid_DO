@@ -1,15 +1,8 @@
 """Application configuration using pydantic-settings.
 
 Environment variables are prefixed with CORVID_ (e.g. CORVID_DATABASE_URL).
-Defaults are set for local development with Docker Compose.
-"""
-
-from pydantic_settings import BaseSettings
-
-"""Application configuration using pydantic-settings.
-
-Environment variables are prefixed with CORVID_ (e.g. CORVID_DATABASE_URL).
 All sensitive values MUST be provided via .env file or environment variables.
+Defaults are set for local development with Docker Compose.
 
 Example .env file:
     CORVID_DATABASE_URL=postgresql+asyncpg://user:pass@localhost/db
@@ -18,7 +11,7 @@ Example .env file:
 """
 
 from pydantic import Field
-from pydantic_settings import SettingsConfigDict
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
