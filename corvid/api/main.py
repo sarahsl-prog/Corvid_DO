@@ -7,9 +7,13 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
+from corvid.api.limiter import limiter
 from corvid.api.routes import analyses, iocs
 from corvid.config import settings
 
@@ -55,6 +59,19 @@ app = FastAPI(
     description="AI-powered cybersecurity threat intelligence platform",
     lifespan=lifespan,
 )
+
+# CORS — must be added before other middleware so preflight requests are handled first
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Rate limiting — attach limiter to app state and register 429 handler
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.middleware("http")

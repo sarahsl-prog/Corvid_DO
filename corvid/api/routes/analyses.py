@@ -8,7 +8,7 @@ Provides endpoints for:
 from datetime import UTC, datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +20,8 @@ from corvid.api.models.analysis import (
     AnalyzeRequest,
     AnalyzeResponse,
 )
+from corvid.api.limiter import limiter
+from corvid.config import settings
 from corvid.db.models import IOC, Analysis
 from corvid.db.session import get_db
 from corvid.worker.normalizer import normalize_ioc
@@ -30,8 +32,10 @@ router = APIRouter(prefix="/analyses", tags=["Analyses"])
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
+@limiter.limit(f"{settings.rate_limit_analyze_per_minute}/minute")
 async def analyze_iocs(
-    request: AnalyzeRequest,
+    request: Request,
+    body: AnalyzeRequest,
     db: AsyncSession = Depends(get_db),
 ) -> AnalyzeResponse:
     """Submit IOC(s) for full AI-powered analysis.
@@ -46,9 +50,9 @@ async def analyze_iocs(
     """
     logger.info(
         "Analyze request: {} IOC(s), priority={}, context_len={}",
-        len(request.iocs),
-        request.priority,
-        len(request.context),
+        len(body.iocs),
+        body.priority,
+        len(body.context),
     )
 
     results: list[AnalysisResultItem] = []
@@ -61,7 +65,7 @@ async def analyze_iocs(
     failure_count = 0
 
     # Process each IOC with savepoints for individual failure isolation
-    for ioc_input in request.iocs:
+    for ioc_input in body.iocs:
         ioc_type = ioc_input.type.value
         ioc_value = normalize_ioc(ioc_input.value)
 
@@ -85,7 +89,7 @@ async def analyze_iocs(
                 agent_output = await agent.analyze_ioc(
                     ioc_type=ioc_type,
                     ioc_value=ioc_value,
-                    context=request.context,
+                    context=body.context,
                     db=db,
                 )
 

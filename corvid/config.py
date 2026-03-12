@@ -86,6 +86,28 @@ class Settings(BaseSettings):
         default="", description="NVD API key for CVE database queries. Increases rate limits."
     )
 
+    # CORS configuration
+    cors_origins: list[str] = Field(
+        default=["http://localhost:5173", "http://localhost:3000"],
+        description="Allowed CORS origins for browser clients. "
+        "Includes Vite dev server (5173) and common alternatives.",
+    )
+
+    # Rate limiting
+    rate_limit_per_minute: int = Field(
+        default=100,
+        ge=1,
+        le=10000,
+        description="Default API rate limit per minute per IP address.",
+    )
+
+    rate_limit_analyze_per_minute: int = Field(
+        default=10,
+        ge=1,
+        le=100,
+        description="Rate limit for the analysis endpoint (compute-intensive operation).",
+    )
+
     # Production tuning parameters
     max_concurrent_enrichments: int = Field(
         default=5,
