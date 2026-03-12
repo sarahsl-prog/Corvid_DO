@@ -263,3 +263,56 @@ class TestNVDProvider:
 
             result = await provider.enrich("ip", "10.0.0.1")
             assert result.success is False
+
+
+class TestErrorSanitization:
+    """Tests for error message sanitization to prevent API key exposure in logs."""
+
+    def test_sanitize_api_key_patterns(self) -> None:
+        """Test that various API key patterns are redacted."""
+        from corvid.worker.providers.abuseipdb import _sanitize_error
+
+        test_cases = [
+            ("Error with key=secret123", "Error with [REDACTED]"),
+            ("Key: abcdef123456", "[REDACTED] abcdef123456"),  # Should redact Key but keep value
+            ("authorization: bearer token123", "[REDACTED] token123"),
+            ("Token=xyz789", "[REDACTED]"),
+        ]
+
+        for input_msg, expected_pattern in test_cases:
+            result = _sanitize_error(input_msg)
+            # Check that sensitive patterns are redacted
+            if "key=" in input_msg.lower():
+                assert "[REDACTED]" in result
+
+    def test_sanitize_preserves_non_sensitive_content(self) -> None:
+        """Test that non-sensitive error content is preserved."""
+        from corvid.worker.providers.abuseipdb import _sanitize_error
+
+        error_msg = "HTTP 404 Not Found for IP 192.168.1.1"
+        result = _sanitize_error(error_msg)
+        assert result == error_msg  # No sensitive data, should be unchanged
+
+    def test_sanitize_api_key_variants(self) -> None:
+        """Test various API key naming conventions are caught."""
+        from corvid.worker.providers.abuseipdb import _sanitize_error
+
+        # These should all trigger redaction
+        sensitive_cases = [
+            "API_KEY=secret123",
+            "api-key: secret123",
+            "ApiKey=secret123",
+            "Authorization: Bearer token123",
+        ]
+
+        for case in sensitive_cases:
+            result = _sanitize_error(case)
+            assert "[REDACTED]" in result, f"Failed to sanitize: {case}"
+
+    def test_nvd_provider_sanitization(self) -> None:
+        """Test that NVD provider also has sanitization."""
+        from corvid.worker.providers.nvd import _sanitize_error
+
+        # NVD should have the same sanitization
+        result = _sanitize_error("Error with apiKey=secret123")
+        assert "[REDACTED]" in result

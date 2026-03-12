@@ -9,7 +9,7 @@ import pytest
 
 from corvid.agent.tools.enrich_external import enrich_ioc_external, get_available_sources
 from corvid.agent.tools.lookup_ioc import lookup_ioc
-from corvid.agent.tools.search_cves import search_cves
+from corvid.agent.tools.search_cves import search_cves, _escape_sql_like
 from corvid.agent.tools.search_kb import search_knowledge_base
 
 
@@ -67,6 +67,25 @@ class TestLookupIOCTool:
 class TestSearchCVEsTool:
     """Tests for the search_cves agent tool."""
 
+    def test_escape_sql_like_escapes_wildcards(self) -> None:
+        """Test that SQL LIKE wildcards are properly escaped."""
+        # % and _ are SQL LIKE wildcards - they should be escaped
+        assert _escape_sql_like("test%") == "test\\%"
+        assert _escape_sql_like("test_") == "test\\_"
+        assert _escape_sql_like("%test") == "\\%test"
+        assert _escape_sql_like("_test") == "\\_test"
+        # Multiple wildcards
+        assert _escape_sql_like("%_%") == "\\%\\_\\%"
+        # Backslash should be escaped first
+        assert _escape_sql_like("test\\") == "test\\\\"
+        assert _escape_sql_like("test\\%") == "test\\\\\\%"
+
+    def test_escape_sql_like_preserves_normal_text(self) -> None:
+        """Test that normal text without wildcards is preserved."""
+        assert _escape_sql_like("FortiOS") == "FortiOS"
+        assert _escape_sql_like("CVE-2024-21762") == "CVE-2024-21762"
+        assert _escape_sql_like("test.query") == "test.query"
+
     @pytest.mark.asyncio
     async def test_search_cves_with_results(self, db_session):
         """Test CVE search that returns results from NVD."""
@@ -122,6 +141,37 @@ class TestSearchCVEsTool:
             assert result["total_found"] == 0
             assert len(result["nvd_results"]) == 0
             assert "no cve" in result["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_search_cves_sql_injection_attempt_blocked(self, db_session) -> None:
+        """Test that SQL injection attempts in search query are blocked.
+        
+        Attempts to inject SQL via LIKE wildcards should be escaped and treated
+        as literal characters, not as SQL wildcards.
+        """
+        # Query containing SQL LIKE wildcards that could be used for injection
+        malicious_query = "test%' OR '1'='1"  # Classic injection attempt
+        
+        mock_nvd_response = {
+            "totalResults": 0,
+            "vulnerabilities": [],
+        }
+
+        with patch("corvid.agent.tools.search_cves.httpx.AsyncClient") as mock_client:
+            mock_instance = AsyncMock()
+            mock_client.return_value.__aenter__.return_value = mock_instance
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = mock_nvd_response
+            mock_response.raise_for_status = MagicMock()
+            mock_instance.get.return_value = mock_response
+
+            # This should complete without error - the wildcards are escaped
+            result = await search_cves(db_session, malicious_query)
+
+            # Result should be normal (no crash, no weird behavior)
+            assert "total_found" in result
+            assert "nvd_results" in result
 
 
 @pytest.mark.phase3

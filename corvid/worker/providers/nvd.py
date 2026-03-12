@@ -6,6 +6,7 @@ related CVEs -- most useful when the IOC is associated with known software.
 """
 
 import json
+import re
 
 import httpx
 from loguru import logger
@@ -13,6 +14,29 @@ from loguru import logger
 from corvid.worker.enrichment import BaseEnrichmentProvider, EnrichmentResult
 
 NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+
+# Patterns to redact from logs (API keys, tokens, auth headers)
+_SENSITIVE_PATTERNS = [
+    re.compile(r'[Kk]ey[=:]\s*\S+', re.IGNORECASE),
+    re.compile(r'[Aa]uthorization[=:]\s*\S+', re.IGNORECASE),
+    re.compile(r'[Tt]oken[=:]\s*\S+', re.IGNORECASE),
+    re.compile(r'[Aa]pi[_-]?[Kk]ey[=:]?\s*\S+', re.IGNORECASE),
+]
+
+
+def _sanitize_error(error_msg: str) -> str:
+    """Redact sensitive patterns from error messages before logging.
+
+    Args:
+        error_msg: The original error message.
+
+    Returns:
+        Sanitized message with sensitive values replaced with [REDACTED].
+    """
+    result = error_msg
+    for pattern in _SENSITIVE_PATTERNS:
+        result = pattern.sub('[REDACTED]', result)
+    return result
 
 
 class NVDProvider(BaseEnrichmentProvider):
@@ -49,8 +73,9 @@ class NVDProvider(BaseEnrichmentProvider):
                 try:
                     data = resp.json()
                 except json.JSONDecodeError as e:
+                    sanitized_error = _sanitize_error(str(e))
                     logger.error(
-                        "NVD returned invalid JSON for {}: {}", ioc_value, e
+                        "NVD returned invalid JSON for {}: {}", ioc_value, sanitized_error
                     )
                     return EnrichmentResult(
                         source=self.source_name,
@@ -60,7 +85,7 @@ class NVDProvider(BaseEnrichmentProvider):
                         },
                         summary="",
                         success=False,
-                        error=f"Invalid JSON response: {e}",
+                        error=f"Invalid JSON response: {sanitized_error}",
                     )
 
                 total = data.get("totalResults", 0)
@@ -89,11 +114,12 @@ class NVDProvider(BaseEnrichmentProvider):
                     success=True,
                 )
         except httpx.HTTPError as e:
-            logger.error("NVD lookup failed for {}: {}", ioc_value, e)
+            sanitized_error = _sanitize_error(str(e))
+            logger.error("NVD lookup failed for {}: {}", ioc_value, sanitized_error)
             return EnrichmentResult(
                 source=self.source_name,
                 raw_response={},
                 summary="",
                 success=False,
-                error=str(e),
+                error=sanitized_error,
             )
