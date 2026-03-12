@@ -330,26 +330,37 @@ def parse_cve_schema_json(file_path: str) -> list[CVEDocument]:
         data = json.load(f)
 
     # Handle both single record and array of records
-    records: list[dict] = []
     if isinstance(data, list):
-        records = data
+        # Array of CVE List V5 records
+        for record in data:
+            doc = _parse_cve_schema_record(record)
+            if doc:
+                documents.append(doc)
     elif isinstance(data, dict):
-        # Check if it's a single record or wrapped in a container
         if "dataType" in data:
-            records = [data]
+            # Single CVE List V5 record
+            doc = _parse_cve_schema_record(data)
+            if doc:
+                documents.append(doc)
         elif "records" in data:
-            records = data["records"]
+            # Wrapped CVE List V5 records
+            for record in data["records"]:
+                doc = _parse_cve_schema_record(record)
+                if doc:
+                    documents.append(doc)
         elif "vulnerabilities" in data:
-            # NVD format
-            records = data["vulnerabilities"]
+            # NVD API format — items use {"cve": {...}}, not CVE List V5 schema.
+            # Must use _parse_cve() which understands cve.id / cve.metrics structure.
+            for vuln_item in data["vulnerabilities"]:
+                doc = _parse_cve(vuln_item)
+                if doc:
+                    documents.append(doc)
         else:
             logger.warning("Unknown JSON structure in {}", file_path)
             return []
-
-    for record in records:
-        doc = _parse_cve_schema_record(record)
-        if doc:
-            documents.append(doc)
+    else:
+        logger.warning("Unexpected top-level type in {}", file_path)
+        return []
 
     logger.info("Parsed {} CVE documents from {}", len(documents), file_path)
     return documents
